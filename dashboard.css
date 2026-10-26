@@ -31,7 +31,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 5; display: flex; width: 252px; flex-direction: column; padding: 28px 18px 18px; border-right: 1px solid #e9e9ed; background: rgb(250 250 252 / 94%); }
 .brand { display: flex; align-items: center; gap: 11px; padding: 0 10px; }
 .brand-mark { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 12px; background: #eaf5ee; }
-.brand-mark svg { width: 25px; fill: none; stroke: var(--green); stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.brand-mark img { display: block; width: 25px; height: 25px; }
 .brand strong, .brand small, .plant-mini strong, .plant-mini small { display: block; }
 .brand strong { font-size: 15px; letter-spacing: -.025em; }
 .brand small { margin-top: 1px; color: var(--muted); font-size: 11px; }
