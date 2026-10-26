@@ -23,8 +23,9 @@
     </section>
 
     <section class="connection-panel" aria-labelledby="connection-title">
-      <div class="connection-copy"><p class="eyebrow">KONEKSI LANGSUNG</p><h2 id="connection-title">Hubungkan ke EMQX</h2><p>Kredensial hanya digunakan di sesi halaman ini dan tidak disimpan.</p></div>
+      <div class="connection-copy"><p class="eyebrow">KONEKSI LANGSUNG</p><h2 id="connection-title">Hubungkan ke EMQX</h2><p>Pilih profil untuk mengisi broker dan kredensial secara otomatis.</p></div>
       <form id="connection-form" class="connection-form">
+        <label class="field profile-field"><span>Profil MQTT</span><select id="broker-profile"><option value="tdr2">TDR2</option><option value="web-panel">SmartPot Web Panel</option></select></label>
         <label class="field field-wide"><span>Alamat WebSocket aman</span><input id="broker-url" type="url" value="wss://af2f1247.ala.asia-southeast1.emqxsl.com:8084/mqtt" autocomplete="url" required></label>
         <label class="field"><span>Username EMQX</span><input id="broker-username" type="text" autocomplete="username"></label>
         <label class="field"><span>Password EMQX</span><input id="broker-password" type="password" autocomplete="current-password"></label>

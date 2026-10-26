@@ -2,7 +2,7 @@
   'use strict';
 
   const els = Object.fromEntries([
-    'connection-badge', 'connection-label', 'connection-form', 'broker-url', 'broker-username', 'broker-password',
+    'connection-badge', 'connection-label', 'connection-form', 'broker-profile', 'broker-url', 'broker-username', 'broker-password',
     'connect-button', 'disconnect-button', 'connection-help', 'scene-wrap', 'light-state', 'light-heading',
     'light-status-note', 'color-chip', 'rgb-value', 'rgb-red-bar', 'rgb-green-bar', 'rgb-blue-bar',
     'rgb-red-value', 'rgb-green-value', 'rgb-blue-value', 'pump-state', 'pump-heading', 'pump-description',
@@ -13,6 +13,18 @@
 
   const HISTORY_STORAGE_KEY = 'smartpot-actuator-history-v1';
   const HISTORY_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+  const MQTT_PROFILES = {
+    tdr2: {
+      brokerUrl: 'wss://ifb44421.ala.asia-southeast1.emqxsl.com:8084/mqtt',
+      username: '',
+      password: ''
+    },
+    'web-panel': {
+      brokerUrl: 'wss://af2f1247.ala.asia-southeast1.emqxsl.com:8084/mqtt',
+      username: 'binusiotgroup10',
+      password: 'binusiotgroup10'
+    }
+  };
   const state = { client: null, lightOn: null, rgb: null, pumpOn: false, water: null, schedules: [], pumpTimer: 0, wateringHistory: [], growLightHistory: [] };
   const timeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
   const dateTimeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
@@ -23,6 +35,14 @@
     els['connection-badge'].classList.add(mode === 'live' ? 'is-live' : mode === 'error' ? 'is-error' : 'is-offline');
     els['connection-label'].textContent = label;
     els['connection-help'].textContent = help;
+  }
+
+  function applyMqttProfile(profileId) {
+    const profile = MQTT_PROFILES[profileId];
+    if (!profile) return;
+    els['broker-url'].value = profile.brokerUrl;
+    els['broker-username'].value = profile.username;
+    els['broker-password'].value = profile.password;
   }
 
   function setRgb(red, green, blue) {
@@ -336,6 +356,9 @@
     });
   });
   els['disconnect-button'].addEventListener('click', disconnect);
+  els['broker-profile'].addEventListener('change', (event) => applyMqttProfile(event.target.value));
+  els['broker-profile'].value = 'web-panel';
+  applyMqttProfile('web-panel');
   els['light-state'].textContent = 'Menunggu status grow light';
   els['pump-state'].textContent = 'Menunggu status pompa';
   els['water-value'].textContent = '—%';
