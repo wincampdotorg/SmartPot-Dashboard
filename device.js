@@ -6,12 +6,16 @@
     'connect-button', 'disconnect-button', 'connection-help', 'scene-wrap', 'light-state', 'light-heading',
     'light-status-note', 'color-chip', 'rgb-value', 'rgb-red-bar', 'rgb-green-bar', 'rgb-blue-bar',
     'rgb-red-value', 'rgb-green-value', 'rgb-blue-value', 'pump-state', 'pump-heading', 'pump-description',
-    'last-topic', 'last-message-time', 'water-value', 'water-meter-fill', 'scene-water-level', 'reservoir-fill',
-    'schedule-source', 'schedule-rows'
+    'last-topic', 'last-message-time', 'water-value', 'water-meter-fill', 'water-status-panel', 'water-warning', 'scene-water-level', 'reservoir-fill', 'reservoir-wave',
+    'schedule-source', 'schedule-rows', 'watering-history-count', 'watering-history-rows',
+    'grow-light-history-count', 'grow-light-history-rows'
   ].map((id) => [id, document.getElementById(id)]));
 
-  const state = { client: null, lightOn: null, rgb: null, pumpOn: false, water: null, schedules: [], pumpTimer: 0 };
+  const HISTORY_STORAGE_KEY = 'smartpot-actuator-history-v1';
+  const HISTORY_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+  const state = { client: null, lightOn: null, rgb: null, pumpOn: false, water: null, schedules: [], pumpTimer: 0, wateringHistory: [], growLightHistory: [] };
   const timeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+  const dateTimeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
   const truthy = (value) => value === true || value === 1 || /^(on|true|1|yes)$/i.test(String(value));
 
   function setConnection(mode, label, help) {
@@ -62,9 +66,16 @@
     const fillY = 514 - fillHeight;
     els['reservoir-fill'].setAttribute('y', String(fillY));
     els['reservoir-fill'].setAttribute('height', String(fillHeight + 12));
+    els['reservoir-wave'].setAttribute('transform', `translate(0 ${Math.round(60 * (1 - water / 100))})`);
+    const lowWater = water < 20;
+    els['scene-wrap'].classList.toggle('water-low', lowWater);
+    els['water-status-panel'].classList.toggle('water-low', lowWater);
     els['water-value'].textContent = `${Math.round(water)}%`;
     els['scene-water-level'].textContent = `${Math.round(water)}%`;
     els['water-meter-fill'].style.width = `${water}%`;
+    els['water-warning'].textContent = water < 10
+      ? 'Air sangat sedikit. Tombol Pump di aplikasi Android dinonaktifkan.'
+      : lowWater ? 'Level air rendah. Isi ulang reservoir sebelum menyiram.' : '';
   }
 
   function setPump(on, message = '') {
@@ -85,6 +96,77 @@
 
   function parseJson(raw) {
     try { return JSON.parse(raw); } catch (_) { return null; }
+  }
+
+  function pruneHistory(events) {
+    const cutoff = Date.now() - HISTORY_WINDOW_MS;
+    const byId = new Map();
+    events.forEach((event) => {
+      const timestamp = Number(event && event.timestamp);
+      if (!event || !Number.isFinite(timestamp) || timestamp < cutoff || timestamp > Date.now() + 5 * 60 * 1000) return;
+      byId.set(String(event.id ?? `${timestamp}:${JSON.stringify(event)}`), { ...event, timestamp });
+    });
+    return [...byId.values()].sort((a, b) => b.timestamp - a.timestamp).slice(0, 500);
+  }
+
+  function persistHistory() {
+    try {
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify({
+        watering: state.wateringHistory,
+        growLight: state.growLightHistory
+      }));
+    } catch (_) { /* Storage may be unavailable in a restricted browser context. */ }
+  }
+
+  function renderHistoryTable(tbody, count, events, columns, emptyText) {
+    tbody.replaceChildren();
+    count.textContent = `${events.length} ${events.length === 1 ? 'catatan' : 'catatan'}`;
+    if (!events.length) {
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = columns;
+      cell.className = 'empty-row';
+      cell.textContent = emptyText;
+      row.append(cell);
+      tbody.append(row);
+      return;
+    }
+    events.forEach((event) => {
+      const row = document.createElement('tr');
+      const cells = columns === 4
+        ? [dateTimeFmt.format(new Date(event.timestamp)) + ' WIB', event.source === 'android_manual' ? 'Tombol Pump' : 'Jadwal otomatis', `${Number(event.waterLevel) || 0}%`, event.outcome === 'failed_low_water' ? 'Gagal · air rendah' : 'Dimulai']
+        : [dateTimeFmt.format(new Date(event.timestamp)) + ' WIB', truthy(event.state) ? 'Menyala' : 'Mati', `R ${Number(event.red) || 0} · G ${Number(event.green) || 0} · B ${Number(event.blue) || 0}`];
+      cells.forEach((text) => {
+        const cell = document.createElement('td');
+        cell.textContent = text;
+        row.append(cell);
+      });
+      tbody.append(row);
+    });
+  }
+
+  function renderHistory() {
+    state.wateringHistory = pruneHistory(state.wateringHistory);
+    state.growLightHistory = pruneHistory(state.growLightHistory);
+    renderHistoryTable(els['watering-history-rows'], els['watering-history-count'], state.wateringHistory, 4, 'Belum ada riwayat penyiraman dalam 3 hari terakhir.');
+    renderHistoryTable(els['grow-light-history-rows'], els['grow-light-history-count'], state.growLightHistory, 3, 'Belum ada riwayat grow light dalam 3 hari terakhir.');
+  }
+
+  function mergeHistory(type, events) {
+    if (!Array.isArray(events)) return;
+    if (type === 'watering') state.wateringHistory = pruneHistory([...state.wateringHistory, ...events]);
+    else state.growLightHistory = pruneHistory([...state.growLightHistory, ...events]);
+    persistHistory();
+    renderHistory();
+  }
+
+  function restoreHistory() {
+    try {
+      const saved = parseJson(localStorage.getItem(HISTORY_STORAGE_KEY) || '{}') || {};
+      state.wateringHistory = pruneHistory(Array.isArray(saved.watering) ? saved.watering : []);
+      state.growLightHistory = pruneHistory(Array.isArray(saved.growLight) ? saved.growLight : []);
+    } catch (_) { /* Begin with empty history if local storage cannot be read. */ }
+    renderHistory();
   }
 
   function renderSchedules() {
@@ -140,6 +222,15 @@
     const message = raw.toString();
     const payload = parseJson(message);
     markMessage(topic);
+
+    if (topic === 'smartpot/history/watering' && payload && payload.type === 'snapshot') {
+      mergeHistory('watering', payload.events);
+      return;
+    }
+    if (topic === 'smartpot/history/grow-light' && payload && payload.type === 'snapshot') {
+      mergeHistory('growLight', payload.events);
+      return;
+    }
 
     if (topic === 'smartpot/pump/status') {
       const on = payload ? truthy(payload.state ?? payload.status_pump ?? payload.pump ?? payload.action) : truthy(message);
@@ -249,4 +340,9 @@
   els['pump-state'].textContent = 'Menunggu status pompa';
   els['water-value'].textContent = '—%';
   renderSchedules();
+  restoreHistory();
+  window.setInterval(() => {
+    renderHistory();
+    persistHistory();
+  }, 60 * 1000);
 })();
