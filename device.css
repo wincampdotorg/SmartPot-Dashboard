@@ -4,3 +4,4 @@
 
 .profile-field{grid-column:1/-1}.field select{width:100%;height:36px;padding:0 10px;border:1px solid #dcdce1;border-radius:9px;background:#fff;color:var(--ink);font-size:11px}.field select:focus{border-color:#5e9a73;outline:3px solid #1872ce33;outline-offset:2px}
 .brand-mark{overflow:hidden;background:#1b3322}.brand-mark img{display:block;width:100%;height:100%;object-fit:cover}
+.history-pagination{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:12px;color:var(--muted);font-size:11px}.history-pagination[hidden]{display:none}.history-pagination .button{min-height:32px}

@@ -8,7 +8,9 @@
     'rgb-red-value', 'rgb-green-value', 'rgb-blue-value', 'pump-state', 'pump-heading', 'pump-description',
     'last-topic', 'last-message-time', 'water-value', 'water-meter-fill', 'water-status-panel', 'water-warning', 'scene-water-level', 'reservoir-fill', 'reservoir-wave',
     'schedule-source', 'schedule-rows', 'watering-history-count', 'watering-history-rows',
-    'grow-light-history-count', 'grow-light-history-rows'
+    'watering-history-pagination', 'watering-history-prev', 'watering-history-page', 'watering-history-next',
+    'grow-light-history-count', 'grow-light-history-rows', 'grow-light-history-pagination',
+    'grow-light-history-prev', 'grow-light-history-page', 'grow-light-history-next'
   ].map((id) => [id, document.getElementById(id)]));
 
   const HISTORY_STORAGE_KEY = 'smartpot-actuator-history-v1';
@@ -26,7 +28,7 @@
       password: 'binusiotgroup10'
     }
   };
-  const state = { client: null, lightOn: null, rgb: null, pumpOn: false, water: null, schedules: [], pumpTimer: 0, wateringHistory: [], growLightHistory: [] };
+  const state = { client: null, lightOn: null, rgb: null, pumpOn: false, water: null, schedules: [], pumpTimer: 0, wateringHistory: [], growLightHistory: [], wateringPage: 1, growLightPage: 1 };
   const timeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
   const dateTimeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
   const truthy = (value) => value === true || value === 1 || /^(on|true|1|yes)$/i.test(String(value));
@@ -139,9 +141,16 @@
     } catch (_) { /* Storage may be unavailable in a restricted browser context. */ }
   }
 
-  function renderHistoryTable(tbody, count, events, columns, emptyText) {
+  function renderHistoryTable(tbody, count, pagination, previousButton, pageLabel, nextButton, events, columns, emptyText, page, setPage) {
     tbody.replaceChildren();
     count.textContent = `${events.length} ${events.length === 1 ? 'catatan' : 'catatan'}`;
+    const pageCount = Math.max(1, Math.ceil(events.length / 10));
+    const currentPage = Math.min(page, pageCount);
+    setPage(currentPage);
+    pagination.hidden = pageCount <= 1;
+    previousButton.disabled = currentPage <= 1;
+    nextButton.disabled = currentPage >= pageCount;
+    pageLabel.textContent = `Halaman ${currentPage} dari ${pageCount}`;
     if (!events.length) {
       const row = document.createElement('tr');
       const cell = document.createElement('td');
@@ -152,7 +161,7 @@
       tbody.append(row);
       return;
     }
-    events.forEach((event) => {
+    events.slice((currentPage - 1) * 10, currentPage * 10).forEach((event) => {
       const row = document.createElement('tr');
       const cells = columns === 4
         ? [dateTimeFmt.format(new Date(event.timestamp)) + ' WIB', event.source === 'android_manual' ? 'Tombol Pump' : 'Jadwal otomatis', `${Number(event.waterLevel) || 0}%`, Number(event.waterLevel) <= 20 ? 'Air Rendah' : 'Sukses Menyiram']
@@ -169,9 +178,14 @@
   function renderHistory() {
     state.wateringHistory = pruneHistory(state.wateringHistory);
     state.growLightHistory = pruneHistory(state.growLightHistory);
-    renderHistoryTable(els['watering-history-rows'], els['watering-history-count'], state.wateringHistory, 4, 'Belum ada riwayat penyiraman dalam 3 hari terakhir.');
-    renderHistoryTable(els['grow-light-history-rows'], els['grow-light-history-count'], state.growLightHistory, 3, 'Belum ada riwayat grow light dalam 3 hari terakhir.');
+    renderHistoryTable(els['watering-history-rows'], els['watering-history-count'], els['watering-history-pagination'], els['watering-history-prev'], els['watering-history-page'], els['watering-history-next'], state.wateringHistory, 4, 'Belum ada riwayat penyiraman dalam 3 hari terakhir.', state.wateringPage, (page) => { state.wateringPage = page; });
+    renderHistoryTable(els['grow-light-history-rows'], els['grow-light-history-count'], els['grow-light-history-pagination'], els['grow-light-history-prev'], els['grow-light-history-page'], els['grow-light-history-next'], state.growLightHistory, 3, 'Belum ada riwayat grow light dalam 3 hari terakhir.', state.growLightPage, (page) => { state.growLightPage = page; });
   }
+
+  els['watering-history-prev'].addEventListener('click', () => { state.wateringPage -= 1; renderHistory(); });
+  els['watering-history-next'].addEventListener('click', () => { state.wateringPage += 1; renderHistory(); });
+  els['grow-light-history-prev'].addEventListener('click', () => { state.growLightPage -= 1; renderHistory(); });
+  els['grow-light-history-next'].addEventListener('click', () => { state.growLightPage += 1; renderHistory(); });
 
   function mergeHistory(type, events) {
     if (!Array.isArray(events)) return;
