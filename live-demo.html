@@ -23,7 +23,7 @@
       <article class="metric"><label>Baterai perangkat</label><div class="reading"><strong id="battery">—</strong><span>%</span></div><div class="delta">SmartPot · 01</div></article>
     </section>
     <section class="panel"><div class="panel-head"><div><h2 id="chart-title">Kelembapan tanah</h2><p>60 pesan sensor terakhir · WIB</p></div><span class="pill" id="message-count">0 pesan</span></div><svg class="chart" id="chart" viewBox="0 0 1000 230" role="img" aria-label="Grafik data sensor yang bergerak"></svg></section>
-    <section class="panel"><div class="panel-head"><div><h2>Jadwal penyiraman otomatis</h2><p>Berulang setiap hari · level air diperiksa sebelum pompa dinyalakan</p></div><span class="pill">Daily</span></div><div class="table-wrap"><table class="schedule"><thead><tr><th>Waktu</th><th>Frekuensi</th><th>Aksi</th><th>Lampu tumbuh</th><th>Status jika dipicu sekarang</th></tr></thead><tbody id="schedule-rows"></tbody></table></div><p class="schedule-help">Mengikuti aplikasi: pompa dinonaktifkan dan jadwal gagal bila level air ≤ 10%. Gunakan tombol “Simulasikan air rendah” untuk melihat status gagal.</p></section>
+    <section class="panel"><div class="panel-head"><div><h2>Jadwal harian</h2><p>Contoh tiga mode aksi · cek air berlaku jika pompa dijadwalkan menyala</p></div><span class="pill">Daily</span></div><div class="table-wrap"><table class="schedule"><thead><tr><th>Waktu</th><th>Frekuensi</th><th>Aksi terjadwal</th><th>Cek air</th><th>Status jika dipicu sekarang</th></tr></thead><tbody id="schedule-rows"></tbody></table></div><p class="schedule-help">Ambang pompa pada aplikasi: level air ≤ 10% membuat penyiraman gagal. Grow light saja tidak memakai air. Tombol uji air rendah menunjukkan dampaknya pada setiap mode. Contoh mode grow light saja belum didukung aplikasi/perangkat saat ini.</p></section>
     <footer class="foot"><span>SmartPot · Demo aliran real-time</span><span>Data simulasi saja · zona waktu WIB</span></footer>
   </main>
   <script>
@@ -31,11 +31,11 @@
       const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const timeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
       const schedules = [
-        { id: 'sch_1', time: '08:00', growLight: false },
-        { id: 'sch_2', time: '14:00', growLight: false },
-        { id: 'sch_3', time: '22:50', growLight: false }
+        { id: 'sch_1', time: '08:00', pumpOn: true, growLight: false },
+        { id: 'sch_2', time: '14:00', pumpOn: true, growLight: true },
+        { id: 'sch_3', time: '22:50', pumpOn: false, growLight: true }
       ];
-      document.getElementById('schedule-rows').innerHTML = schedules.map((item, index) => `<tr><td>${item.time}</td><td>Setiap hari</td><td>Penyiraman otomatis</td><td class="light-off">${item.growLight ? 'Aktif' : 'Nonaktif'}</td><td><span class="pill" id="schedule-status-${index}">Menunggu pembacaan</span></td></tr>`).join('');
+      document.getElementById('schedule-rows').innerHTML = schedules.map((item, index) => `<tr><td>${item.time}</td><td>Setiap hari</td><td>${item.pumpOn ? (item.growLight ? 'Penyiraman + grow light' : 'Penyiraman saja') : 'Grow light saja'}</td><td>${item.pumpOn ? 'Wajib · > 10%' : 'Tidak perlu'}</td><td><span class="pill" id="schedule-status-${index}">Menunggu pembacaan</span></td></tr>`).join('');
       const history = [];
       const current = { soil: 58.2, temp: 28.1, humidity: 74.6, water: 82.5, battery: 91.8 };
       const previous = { ...current };
@@ -51,11 +51,14 @@
       let phase = 0;
       const el = id => document.getElementById(id);
       function updateScheduleStatuses(waterLevel) {
-        const sufficient = waterLevel > 10;
-        schedules.forEach((_, index) => {
+        schedules.forEach((schedule, index) => {
           const status = el(`schedule-status-${index}`);
-          status.classList.toggle('fail', !sufficient);
-          status.textContent = sufficient ? `Siap disiram · air ${fmt.format(waterLevel)}%` : `Gagal · air ${fmt.format(waterLevel)}% (≤ 10%)`;
+          const insufficient = schedule.pumpOn && waterLevel <= 10;
+          status.classList.toggle('fail', insufficient);
+          if (!schedule.pumpOn) status.textContent = 'Grow light siap aktif';
+          else if (insufficient && schedule.growLight) status.textContent = `Siram gagal · air ${fmt.format(waterLevel)}% (≤ 10%); grow light tetap terjadwal`;
+          else if (insufficient) status.textContent = `Gagal siram · air ${fmt.format(waterLevel)}% (≤ 10%)`;
+          else status.textContent = schedule.growLight ? `Siap · air ${fmt.format(waterLevel)}% · grow light` : `Siap disiram · air ${fmt.format(waterLevel)}%`;
         });
       }
       function nextMessage() {
