@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f5f7">
+  <link rel="icon" type="image/svg+xml" href="assets/smartpot-logo.svg">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self' https://unpkg.com; img-src 'self' data:; connect-src 'self' wss:; base-uri 'self'; form-action 'self'; object-src 'none'">
   <title>SmartPot — Visualisasi Perangkat</title>
   <link rel="stylesheet" href="device.css">
@@ -13,7 +14,7 @@
 <body>
   <main class="page-shell">
     <header class="topbar">
-      <a class="brand" href="index.html" aria-label="SmartPot, kembali ke ringkasan"><span class="brand-mark" aria-hidden="true">✳</span><span><strong>SmartPot</strong><small>Plant monitor</small></span></a>
+      <a class="brand" href="index.html" aria-label="SmartPot, kembali ke ringkasan"><span class="brand-mark" aria-hidden="true"><img src="assets/smartpot-logo.svg" alt=""></span><span><strong>SmartPot</strong><small>Plant monitor</small></span></a>
       <a class="back-link" href="index.html">← Kembali ke ringkasan</a>
     </header>
 
@@ -23,7 +24,7 @@
     </section>
 
     <section class="connection-panel" aria-labelledby="connection-title">
-      <div class="connection-copy"><p class="eyebrow">KONEKSI LANGSUNG</p><h2 id="connection-title">Hubungkan ke EMQX</h2><p>Pilih profil untuk mengisi broker dan kredensial secara otomatis.</p></div>
+      <div class="connection-copy"><p class="eyebrow">KONEKSI LANGSUNG</p><h2 id="connection-title">Hubungkan ke EMQX</h2><p>Profil web panel terisi otomatis dan koneksi akan dipulihkan saat halaman dibuka.</p></div>
       <form id="connection-form" class="connection-form">
         <label class="field profile-field"><span>Profil MQTT</span><select id="broker-profile"><option value="tdr2">TDR2</option><option value="web-panel">SmartPot Web Panel</option></select></label>
         <label class="field field-wide"><span>Alamat WebSocket aman</span><input id="broker-url" type="url" value="wss://af2f1247.ala.asia-southeast1.emqxsl.com:8084/mqtt" autocomplete="url" required></label>

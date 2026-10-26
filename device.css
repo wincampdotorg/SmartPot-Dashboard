@@ -3,3 +3,4 @@
 .scene-wrap{display:flex;flex-direction:column}.scene-legend{position:static;padding:7px 0 2px}.water-low #reservoir-fill{filter:hue-rotate(158deg) saturate(1.35)}.water-low #reservoir-wave{stroke:#ffd1d1}.pump-status-panel .water-warning{min-height:15px;margin:7px 0 0;color:#a33d3d;font-size:10px;font-weight:600}.pump-status-panel .water-warning:empty{display:none}.water-low .pump-meta strong{color:#b42318}.water-low .water-meter{background:#f8e5e5}.water-low .water-meter span{background:linear-gradient(90deg,#f49a91,#cc3434)}
 
 .profile-field{grid-column:1/-1}.field select{width:100%;height:36px;padding:0 10px;border:1px solid #dcdce1;border-radius:9px;background:#fff;color:var(--ink);font-size:11px}.field select:focus{border-color:#5e9a73;outline:3px solid #1872ce33;outline-offset:2px}
+.brand-mark{overflow:hidden;background:#1b3322}.brand-mark img{display:block;width:100%;height:100%;object-fit:cover}

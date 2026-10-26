@@ -12,6 +12,7 @@
   ].map((id) => [id, document.getElementById(id)]));
 
   const HISTORY_STORAGE_KEY = 'smartpot-actuator-history-v1';
+  const MANUAL_DISCONNECT_KEY = 'smartpot-manual-disconnect';
   const HISTORY_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
   const MQTT_PROFILES = {
     tdr2: {
@@ -311,6 +312,7 @@
 
   els['connection-form'].addEventListener('submit', (event) => {
     event.preventDefault();
+    sessionStorage.removeItem(MANUAL_DISCONNECT_KEY);
     if (!window.mqtt) {
       setConnection('error', 'Library MQTT gagal dimuat', 'Periksa koneksi internet untuk memuat MQTT.js dari unpkg.');
       return;
@@ -355,7 +357,10 @@
       els['disconnect-button'].disabled = true;
     });
   });
-  els['disconnect-button'].addEventListener('click', disconnect);
+  els['disconnect-button'].addEventListener('click', () => {
+    sessionStorage.setItem(MANUAL_DISCONNECT_KEY, '1');
+    disconnect();
+  });
   els['broker-profile'].addEventListener('change', (event) => applyMqttProfile(event.target.value));
   els['broker-profile'].value = 'web-panel';
   applyMqttProfile('web-panel');
@@ -364,6 +369,9 @@
   els['water-value'].textContent = '—%';
   renderSchedules();
   restoreHistory();
+  if (sessionStorage.getItem(MANUAL_DISCONNECT_KEY) !== '1') {
+    window.addEventListener('load', () => els['connection-form'].requestSubmit(), { once: true });
+  }
   window.setInterval(() => {
     renderHistory();
     persistHistory();
