@@ -1,13 +1,8 @@
 # SmartPot Dashboard
 
-Dashboard statis HTML, CSS, dan JavaScript. Tidak memakai PHP, framework, build step, atau kredensial browser.
+Dashboard statis HTML, CSS, dan JavaScript yang diterbitkan melalui GitHub Pages.
 
-Dashboard memvisualisasikan 1.440 baris pada [`data.json`](data.json), satu titik tiap menit selama sehari. Dataset ini adalah **simulasi** dan tidak diperbarui otomatis dari EMQX Tables.
+- `index.html`: ringkasan sensor dan simulasi data satu hari (1.440 titik per menit). Data ini adalah **simulasi**, bukan data aktual dari ESP32.
+- `device.html`: visualisasi perangkat dengan grow light RGB dan aliran pompa yang diperbarui melalui MQTT over WSS, serta tampilan jadwal harian. Masukkan kredensial EMQX di halaman untuk menghubungkan sesi.
 
-## GitHub Pages
-
-Workflow di `.github/workflows/pages.yml` menerbitkan situs setiap ada perubahan ke branch `main`. Aktifkan **Settings → Pages → Build and deployment → Source: GitHub Actions** pada repository.
-
-## Pengembangan lokal
-
-Buka `index.html` melalui server file statis lokal agar browser bisa mengambil `data.json`. Tidak diperlukan PHP.
+GitHub Pages memakai branch `main` dari root repository.
