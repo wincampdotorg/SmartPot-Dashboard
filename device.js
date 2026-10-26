@@ -14,6 +14,7 @@
   ].map((id) => [id, document.getElementById(id)]));
 
   const HISTORY_STORAGE_KEY = 'smartpot-actuator-history-v1';
+  const DEVICE_STATE_STORAGE_KEY = 'smartpot-device-state-v1';
   const MANUAL_DISCONNECT_KEY = 'smartpot-manual-disconnect';
   const HISTORY_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
   const MQTT_PROFILES = {
@@ -32,6 +33,24 @@
   const timeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
   const dateTimeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
   const truthy = (value) => value === true || value === 1 || /^(on|true|1|yes)$/i.test(String(value));
+
+  function deviceStateStorageKey(type) {
+    return `${DEVICE_STATE_STORAGE_KEY}:${els['broker-profile'].value || 'default'}:${type}`;
+  }
+
+  function persistLightState() {
+    if (state.lightOn === null) return;
+    try {
+      localStorage.setItem(deviceStateStorageKey('grow-light'), JSON.stringify({ on: state.lightOn, rgb: state.rgb }));
+    } catch (_) { /* Browser storage may be unavailable. */ }
+  }
+
+  function persistWaterState() {
+    if (state.water === null) return;
+    try {
+      localStorage.setItem(deviceStateStorageKey('water'), JSON.stringify({ level: state.water }));
+    } catch (_) { /* Browser storage may be unavailable. */ }
+  }
 
   function setConnection(mode, label, help) {
     els['connection-badge'].classList.remove('is-live', 'is-error', 'is-offline');
@@ -66,11 +85,13 @@
       els[`rgb-${channel}-bar`].style.width = `${(values[index] / 255) * 100}%`;
       els[`rgb-${channel}-value`].textContent = String(values[index]);
     });
+    persistLightState();
   }
 
   function setLight(on, rgb) {
     state.lightOn = Boolean(on);
     if (Array.isArray(rgb)) setRgb(...rgb);
+    persistLightState();
     els['scene-wrap'].classList.toggle('light-on', state.lightOn);
     els['light-state'].textContent = state.lightOn ? 'Grow light menyala' : 'Grow light mati';
     els['light-heading'].textContent = state.lightOn ? 'Menyala' : 'Mati';
@@ -85,6 +106,7 @@
     const water = Math.max(0, Math.min(100, Number(value)));
     if (!Number.isFinite(water)) return;
     state.water = water;
+    persistWaterState();
     const fillHeight = Math.round(60 * water / 100);
     const fillY = 514 - fillHeight;
     els['reservoir-fill'].setAttribute('y', String(fillY));
@@ -119,6 +141,25 @@
 
   function parseJson(raw) {
     try { return JSON.parse(raw); } catch (_) { return null; }
+  }
+
+  function parsePercentage(value) {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    if (typeof value !== 'string' || !/^\s*\d+(?:\.\d+)?\s*%?\s*$/.test(value)) return null;
+    const parsed = Number(value.replace('%', '').trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function restoreDeviceState() {
+    try {
+      const cachedLight = parseJson(localStorage.getItem(deviceStateStorageKey('grow-light')) || 'null');
+      if (cachedLight && typeof cachedLight.on === 'boolean') {
+        setLight(cachedLight.on, Array.isArray(cachedLight.rgb) ? cachedLight.rgb : undefined);
+      }
+      const cachedWater = parseJson(localStorage.getItem(deviceStateStorageKey('water')) || 'null');
+      const level = parsePercentage(cachedWater && cachedWater.level);
+      if (level !== null) setWater(level);
+    } catch (_) { /* Continue waiting for current MQTT state if storage is unavailable. */ }
   }
 
   function pruneHistory(events) {
@@ -306,9 +347,16 @@
       return;
     }
 
-    if (!payload) return;
-    const water = payload.water_level ?? payload.waterLevel ?? payload.water ?? payload.level;
-    if (water !== undefined) setWater(water);
+    const scalarWater = parsePercentage(payload) ?? parsePercentage(message);
+    if (/water|reservoir/i.test(topic) && scalarWater !== null) {
+      setWater(scalarWater);
+      return;
+    }
+    if (!payload || typeof payload !== 'object') return;
+    const water = payload.water_level ?? payload.waterLevel ?? payload.waterLevelPercent
+      ?? payload.water_level_percent ?? payload.water_percent ?? payload.water ?? payload.level ?? payload.w;
+    const waterPercent = parsePercentage(water);
+    if (waterPercent !== null) setWater(waterPercent);
     if (payload.status_pump !== undefined || payload.pump !== undefined) setPump(truthy(payload.status_pump ?? payload.pump));
     const light = payload.growLight ?? payload.grow_light ?? payload.light;
     if (light !== undefined) setLight(truthy(light), [payload.R ?? payload.r ?? state.rgb?.[0] ?? 0, payload.G ?? payload.g ?? state.rgb?.[1] ?? 0, payload.B ?? payload.b ?? state.rgb?.[2] ?? 0]);
@@ -375,12 +423,16 @@
     sessionStorage.setItem(MANUAL_DISCONNECT_KEY, '1');
     disconnect();
   });
-  els['broker-profile'].addEventListener('change', (event) => applyMqttProfile(event.target.value));
+  els['broker-profile'].addEventListener('change', (event) => {
+    applyMqttProfile(event.target.value);
+    restoreDeviceState();
+  });
   els['broker-profile'].value = 'web-panel';
   applyMqttProfile('web-panel');
   els['light-state'].textContent = 'Menunggu status grow light';
   els['pump-state'].textContent = 'Menunggu status pompa';
   els['water-value'].textContent = '—%';
+  restoreDeviceState();
   renderSchedules();
   restoreHistory();
   if (sessionStorage.getItem(MANUAL_DISCONNECT_KEY) !== '1') {
