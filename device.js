@@ -155,7 +155,7 @@
     events.forEach((event) => {
       const row = document.createElement('tr');
       const cells = columns === 4
-        ? [dateTimeFmt.format(new Date(event.timestamp)) + ' WIB', event.source === 'android_manual' ? 'Tombol Pump' : 'Jadwal otomatis', `${Number(event.waterLevel) || 0}%`, event.outcome === 'failed_low_water' ? 'Gagal · air rendah' : 'Dimulai']
+        ? [dateTimeFmt.format(new Date(event.timestamp)) + ' WIB', event.source === 'android_manual' ? 'Tombol Pump' : 'Jadwal otomatis', `${Number(event.waterLevel) || 0}%`, Number(event.waterLevel) <= 20 ? 'Air Rendah' : 'Sukses Menyiram']
         : [dateTimeFmt.format(new Date(event.timestamp)) + ' WIB', truthy(event.state) ? 'Menyala' : 'Mati', `R ${Number(event.red) || 0} · G ${Number(event.green) || 0} · B ${Number(event.blue) || 0}`];
       cells.forEach((text) => {
         const cell = document.createElement('td');
