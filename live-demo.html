@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f5f7">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
+  <title>SmartPot — Demo real-time</title>
+  <style>
+    :root{color-scheme:light;--bg:#f5f5f7;--card:#fff;--ink:#1d1d1f;--muted:#777780;--line:#e8e8eb;--green:#43865f;--blue:#5683cb;--orange:#ce8650;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-size:14px}.shell{max-width:1120px;margin:auto;padding:24px 28px 48px}.top{display:flex;align-items:center;justify-content:space-between;padding:8px 0 22px;border-bottom:1px solid var(--line)}a{color:inherit;text-decoration:none}.brand{font-weight:700;letter-spacing:-.03em}.brand span{color:var(--muted);font-weight:450;margin-left:8px}.right{display:flex;align-items:center;gap:12px}.back{color:#56565d;font-size:13px}.badge{display:flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid #d9e9df;border-radius:99px;background:#f3fbf5;color:#28704b;font-size:11px;font-weight:600}.dot{width:7px;height:7px;border-radius:50%;background:#36a46b;box-shadow:0 0 0 3px #e0f3e7;animation:pulse 1.6s infinite}.hero{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;padding:34px 0 21px}.eyebrow{margin:0 0 7px;color:#92929a;font-size:10px;font-weight:700;letter-spacing:.1em}.hero h1{margin:0;font-size:clamp(28px,4vw,40px);letter-spacing:-.055em;line-height:1.1}.sub{margin:9px 0 0;color:var(--muted);font-size:13px}.actions{display:flex;align-items:center;gap:10px}.btn{border:0;border-radius:10px;padding:10px 14px;background:#1d1d1f;color:white;font-weight:600;font-size:12px;cursor:pointer}.btn:hover{background:#343438}.tick{color:var(--muted);font-size:11px;white-space:nowrap}.note{margin:0 0 18px;padding:11px 13px;border:1px solid #f0dfc8;border-radius:11px;background:#fffbf5;color:#795b37;font-size:11px}.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px}.metric,.panel{border:1px solid var(--line);border-radius:15px;background:var(--card);box-shadow:0 5px 18px #17171d05}.metric{padding:15px}.metric label{color:var(--muted);font-size:11px}.reading{display:flex;align-items:baseline;gap:5px;margin-top:12px}.reading strong{font-size:29px;letter-spacing:-.06em;font-variant-numeric:tabular-nums}.reading span{color:var(--muted);font-size:12px}.delta{margin-top:6px;color:#9a9aa1;font-size:10px}.panel{margin-top:14px;padding:19px 20px}.panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.panel h2{margin:0;font-size:16px;letter-spacing:-.03em}.panel-head p{margin:5px 0 0;color:var(--muted);font-size:11px}.chart{display:block;width:100%;height:236px;margin-top:14px}.table-wrap{overflow-x:auto}.schedule{width:100%;border-collapse:collapse;margin-top:14px;min-width:500px}.schedule th,.schedule td{padding:12px 10px;border-bottom:1px solid #eeeeF0;text-align:left;font-size:12px}.schedule th{color:#888891;font-size:10px;font-weight:600}.schedule td:first-child{font-variant-numeric:tabular-nums;font-weight:650}.pill{display:inline-flex;padding:4px 8px;border-radius:99px;background:#edf5ef;color:#36734c;font-size:10px;font-weight:600}.light-off{color:#85858d}.foot{display:flex;justify-content:space-between;gap:12px;margin-top:18px;color:#9999a1;font-size:10px}.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}@keyframes pulse{50%{opacity:.45;box-shadow:0 0 0 5px #e0f3e7}}@media(max-width:800px){.metrics{grid-template-columns:repeat(3,1fr)}}@media(max-width:560px){.shell{padding:15px 14px 32px}.top{align-items:flex-start}.right{gap:7px;flex-direction:column-reverse;align-items:flex-end}.back{font-size:11px}.hero{align-items:flex-start;flex-direction:column;padding:25px 0 16px}.actions{width:100%;justify-content:space-between}.metrics{grid-template-columns:repeat(2,1fr);gap:8px}.metric{padding:13px}.reading strong{font-size:26px}.panel{padding:16px 13px}.chart{height:190px}.foot{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="top"><a class="brand" href="./">SmartPot<span>· Demo real-time</span></a><div class="right"><a class="back" href="./">← Dashboard 24 jam</a><span class="badge"><i class="dot" aria-hidden="true"></i> SIMULASI LIVE</span></div></header>
+    <section class="hero"><div><p class="eyebrow">ALIRAN TELEMETRI · SMARTPOT 01</p><h1>Data sensor, bergerak langsung.</h1><p class="sub">Simulasi pesan sensor baru setiap detik seperti aliran MQTT dari ESP32.</p></div><div class="actions"><button class="btn" id="toggle" type="button">Jeda simulasi</button><span class="tick" id="last-update">Menyiapkan aliran…</span></div></section>
+    <p class="note">Mode demo ini menghasilkan data sintetis di browser. Saat perangkat terhubung, aliran WSS/MQTT dapat memakai tampilan yang sama. Nilai ini bukan pembacaan ESP32 atau EMQX.</p>
+    <section class="metrics" aria-label="Pembacaan sensor terkini">
+      <article class="metric"><label>Kelembapan tanah</label><div class="reading"><strong id="soil">—</strong><span>%</span></div><div class="delta" id="soil-delta">Menunggu data</div></article>
+      <article class="metric"><label>Suhu</label><div class="reading"><strong id="temp">—</strong><span>°C</span></div><div class="delta" id="temp-delta">Lingkungan</div></article>
+      <article class="metric"><label>Kelembapan udara</label><div class="reading"><strong id="humidity">—</strong><span>%</span></div><div class="delta" id="humidity-delta">Relatif</div></article>
+      <article class="metric"><label>Level air</label><div class="reading"><strong id="water">—</strong><span>%</span></div><div class="delta" id="water-delta">Reservoir</div></article>
+      <article class="metric"><label>Baterai perangkat</label><div class="reading"><strong id="battery">—</strong><span>%</span></div><div class="delta">SmartPot · 01</div></article>
+    </section>
+    <section class="panel"><div class="panel-head"><div><h2 id="chart-title">Kelembapan tanah</h2><p>60 pesan sensor terakhir · WIB</p></div><span class="pill" id="message-count">0 pesan</span></div><svg class="chart" id="chart" viewBox="0 0 1000 230" role="img" aria-label="Grafik data sensor yang bergerak"></svg></section>
+    <section class="panel"><div class="panel-head"><div><h2>Jadwal otomatis</h2><p>Mengikuti jadwal default aplikasi SmartPot</p></div><span class="pill">Harian</span></div><div class="table-wrap"><table class="schedule"><thead><tr><th>Waktu</th><th>Aksi</th><th>Lampu tumbuh</th><th>Status</th></tr></thead><tbody id="schedule-rows"></tbody></table></div></section>
+    <footer class="foot"><span>SmartPot · Demo aliran real-time</span><span>Data simulasi saja · zona waktu WIB</span></footer>
+  </main>
+  <script>
+    (() => {
+      const fmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const timeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+      const schedules = [
+        { id: 'sch_1', time: '08:00', growLight: false },
+        { id: 'sch_2', time: '14:00', growLight: false },
+        { id: 'sch_3', time: '22:50', growLight: false }
+      ];
+      document.getElementById('schedule-rows').innerHTML = schedules.map(item => `<tr><td>${item.time}</td><td>Penyiraman otomatis</td><td class="light-off">${item.growLight ? 'Aktif' : 'Nonaktif'}</td><td><span class="pill">Terjadwal</span></td></tr>`).join('');
+      const history = [];
+      const current = { soil: 58.2, temp: 28.1, humidity: 74.6, water: 82.5, battery: 91.8 };
+      const previous = { ...current };
+      const fields = [
+        { key: 'soil', id: 'soil', color: '#43865f', min: 20, max: 85 },
+        { key: 'temp', id: 'temp', color: '#ce8650', min: 16, max: 36 },
+        { key: 'humidity', id: 'humidity', color: '#5683cb', min: 35, max: 100 },
+        { key: 'water', id: 'water', color: '#4a9ab9', min: 0, max: 100 }
+      ];
+      let paused = false;
+      let messageNo = 0;
+      let phase = 0;
+      const el = id => document.getElementById(id);
+      function nextMessage() {
+        phase += 0.18;
+        current.temp = Math.max(24, Math.min(33, current.temp + (Math.random() - .49) * .42 + Math.sin(phase / 9) * .08));
+        current.humidity = Math.max(52, Math.min(91, current.humidity + (Math.random() - .52) * 1.7 - (current.temp - 28) * .025));
+        current.soil = Math.max(37, Math.min(71, current.soil - .045 + (Math.random() - .46) * .24));
+        current.water = Math.max(25, Math.min(95, current.water - .015 + (Math.random() - .5) * .05));
+        current.battery = Math.max(20, current.battery - .001 - Math.random() * .002);
+        const row = { ...current, ts: Date.now() };
+        history.push(row);
+        if (history.length > 60) history.shift();
+        messageNo += 1;
+        for (const field of fields) {
+          el(field.id).textContent = fmt.format(row[field.key]);
+          const diff = row[field.key] - previous[field.key];
+          const delta = el(`${field.id}-delta`);
+          if (Math.abs(diff) > .01) delta.textContent = `${diff > 0 ? '↗' : '↘'} ${fmt.format(Math.abs(diff))} dari pesan sebelumnya`;
+          previous[field.key] = row[field.key];
+        }
+        el('last-update').textContent = `Pesan ${messageNo} · ${timeFmt.format(new Date(row.ts))} WIB`;
+        el('message-count').textContent = `${history.length} pesan`;
+        draw();
+      }
+      function draw() {
+        const svg = el('chart');
+        const metric = fields[0];
+        const values = history.map(row => row[metric.key]);
+        svg.replaceChildren();
+        if (values.length < 2) return;
+        const left = 38, right = 988, top = 12, bottom = 210;
+        const x = i => left + (right - left) * i / (values.length - 1);
+        const y = v => bottom - (v - metric.min) / (metric.max - metric.min) * (bottom - top);
+        for (let i = 0; i <= 4; i++) {
+          const gy = top + (bottom - top) * i / 4;
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', left); line.setAttribute('x2', right); line.setAttribute('y1', gy); line.setAttribute('y2', gy); line.setAttribute('stroke', '#eeeeF0'); svg.append(line);
+        }
+        const pathD = values.map((v, i) => `${i ? 'L' : 'M'}${x(i)},${y(v)}`).join(' ');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathD); path.setAttribute('fill', 'none'); path.setAttribute('stroke', metric.color); path.setAttribute('stroke-width', '3'); path.setAttribute('stroke-linecap', 'round'); path.setAttribute('stroke-linejoin', 'round'); svg.append(path);
+        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        dot.setAttribute('cx', x(values.length - 1)); dot.setAttribute('cy', y(values.at(-1))); dot.setAttribute('r', '5'); dot.setAttribute('fill', 'white'); dot.setAttribute('stroke', metric.color); dot.setAttribute('stroke-width', '3'); svg.append(dot);
+      }
+      el('toggle').addEventListener('click', () => {
+        paused = !paused;
+        el('toggle').textContent = paused ? 'Lanjutkan simulasi' : 'Jeda simulasi';
+        document.querySelector('.badge').innerHTML = `<i class="dot" aria-hidden="true" style="${paused ? 'animation:none;background:#aaa;box-shadow:none' : ''}"></i> ${paused ? 'DIJEDA' : 'SIMULASI LIVE'}`;
+      });
+      nextMessage();
+      setInterval(() => { if (!paused) nextMessage(); }, 1000);
+    })();
+  </script>
+</body>
+</html>
