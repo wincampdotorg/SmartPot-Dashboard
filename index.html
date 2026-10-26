@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f5f7">
   <link rel="icon" type="image/svg+xml" href="assets/smartpot-mark.svg">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self' https://unpkg.com; img-src 'self' data:; connect-src 'self' wss:; base-uri 'self'; form-action 'self'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://cdn.jsdelivr.net; script-src 'self' https://unpkg.com; img-src 'self' data:; connect-src 'self' wss:; base-uri 'self'; form-action 'self'; object-src 'none'">
   <title>SmartPot — Ringkasan</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
   <link rel="stylesheet" href="dashboard.css">
   <script src="https://unpkg.com/mqtt@5.16.1/dist/mqtt.min.js" crossorigin="anonymous" defer></script>
   <script src="dashboard.js" defer></script>
@@ -67,15 +68,15 @@
       <section class="metrics-section" aria-labelledby="metrics-title">
         <div class="section-heading"><div><p class="eyebrow">SEKARANG</p><h2 id="metrics-title">Kondisi sensor</h2></div><span class="updated-label" id="updated-label">Menunggu pembaruan</span></div>
         <div class="metrics-grid">
-          <article class="metric-card metric-soil"><div class="metric-top"><span class="metric-name">Kelembapan tanah</span><span class="metric-symbol" aria-hidden="true">◉</span></div><div class="metric-reading"><strong id="metric-soil">—</strong><span>%</span></div><div class="metric-bottom"><span id="soil-note">Sensor tanah</span><svg class="sparkline" id="spark-soil" viewBox="0 0 112 34" aria-hidden="true"></svg></div></article>
-          <article class="metric-card metric-temp"><div class="metric-top"><span class="metric-name">Suhu</span><span class="metric-symbol" aria-hidden="true">⌁</span></div><div class="metric-reading"><strong id="metric-temp">—</strong><span>°C</span></div><div class="metric-bottom"><span>Lingkungan</span><svg class="sparkline" id="spark-temp" viewBox="0 0 112 34" aria-hidden="true"></svg></div></article>
-          <article class="metric-card metric-humidity"><div class="metric-top"><span class="metric-name">Kelembapan udara</span><span class="metric-symbol" aria-hidden="true">◌</span></div><div class="metric-reading"><strong id="metric-humidity">—</strong><span>%</span></div><div class="metric-bottom"><span>Relatif</span><svg class="sparkline" id="spark-humidity" viewBox="0 0 112 34" aria-hidden="true"></svg></div></article>
-          <article class="metric-card metric-water"><div class="metric-top"><span class="metric-name">Level air</span><span class="metric-symbol" aria-hidden="true">◡</span></div><div class="metric-reading"><strong id="metric-water">—</strong><span>%</span></div><div class="metric-bottom"><span id="water-note">Reservoir</span><svg class="sparkline" id="spark-water" viewBox="0 0 112 34" aria-hidden="true"></svg></div></article>
-          <article class="metric-card metric-battery"><div class="metric-top"><span class="metric-name">Baterai perangkat</span><span class="metric-symbol" aria-hidden="true">▰</span></div><div class="metric-reading"><strong id="metric-battery">—</strong><span>%</span></div><div class="metric-bottom"><span>SmartPot 01</span><svg class="sparkline" id="spark-battery" viewBox="0 0 112 34" aria-hidden="true"></svg></div></article>
+          <article class="metric-card metric-soil card"><div class="metric-top"><span class="metric-name">Kelembapan tanah</span><span class="metric-symbol" aria-hidden="true">◉</span></div><div class="metric-reading"><strong id="metric-soil">—</strong><span>%</span></div><div class="metric-bottom"><span id="soil-note">Sensor tanah</span><svg class="sparkline" id="spark-soil" viewBox="0 0 112 34" aria-hidden="true"></svg></div></article>
+          <article class="metric-card metric-temp card"><div class="metric-top"><span class="metric-name">Suhu</span><span class="metric-symbol" aria-hidden="true">⌁</span></div><div class="metric-reading"><strong id="metric-temp">—</strong><span>°C</span></div><div class="metric-bottom"><span>Lingkungan</span><svg class="sparkline" id="spark-temp" viewBox="0 0 112 34" aria-hidden="true"></svg></div></article>
+          <article class="metric-card metric-humidity card"><div class="metric-top"><span class="metric-name">Kelembapan udara</span><span class="metric-symbol" aria-hidden="true">◌</span></div><div class="metric-reading"><strong id="metric-humidity">—</strong><span>%</span></div><div class="metric-bottom"><span>Relatif</span><svg class="sparkline" id="spark-humidity" viewBox="0 0 112 34" aria-hidden="true"></svg></div></article>
+          <article class="metric-card metric-water card"><div class="metric-top"><span class="metric-name">Level air</span><span class="metric-symbol" aria-hidden="true">◡</span></div><div class="metric-reading"><strong id="metric-water">—</strong><span>%</span></div><div class="metric-bottom"><span id="water-note">Reservoir</span><svg class="sparkline" id="spark-water" viewBox="0 0 112 34" aria-hidden="true"></svg></div></article>
+          <article class="metric-card metric-battery card"><div class="metric-top"><span class="metric-name">Baterai perangkat</span><span class="metric-symbol" aria-hidden="true">▰</span></div><div class="metric-reading"><strong id="metric-battery">—</strong><span>%</span></div><div class="metric-bottom"><span>SmartPot 01</span><svg class="sparkline" id="spark-battery" viewBox="0 0 112 34" aria-hidden="true"></svg></div></article>
         </div>
       </section>
 
-      <section class="chart-card" id="grafik" aria-labelledby="chart-title">
+      <section class="chart-card card" id="grafik" aria-labelledby="chart-title">
         <div class="chart-header">
           <div><p class="eyebrow">TREN SENSOR</p><h2 id="chart-title">Kelembapan tanah <span class="chart-current" id="chart-current">—</span></h2><p class="chart-subtitle" id="chart-period">24 jam terakhir · interval 1 menit</p></div>
           <div class="chart-controls" role="group" aria-label="Pilih parameter grafik">
@@ -95,7 +96,7 @@
         </div>
       </section>
 
-      <section class="chart-card watering-chart-card" aria-labelledby="watering-chart-title">
+      <section class="chart-card watering-chart-card card" aria-labelledby="watering-chart-title">
         <div class="chart-header">
           <div><p class="eyebrow">AKTIVITAS PERANGKAT · MQTT</p><h2 id="watering-chart-title">Riwayat penyiraman <span class="chart-current" id="watering-total">— tindakan</span></h2><p class="chart-subtitle" id="watering-chart-period">Jumlah penyiraman per jam · 24 jam terakhir · WIB</p></div>
           <span class="source-badge is-preview" id="watering-history-source"><span class="status-dot"></span><span id="watering-history-source-label">Menunggu riwayat MQTT</span></span>

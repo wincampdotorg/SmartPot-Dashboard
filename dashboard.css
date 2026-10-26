@@ -184,3 +184,32 @@ h1 { margin-bottom: 4px; font-size: clamp(27px, 3vw, 34px); font-weight: 650; le
 .watering-low-key { background: #d45e5e; }
 .watering-chart-summary { min-height: 16px; margin: 4px 0 0; }
 @media (max-width: 640px) { .watering-chart-wrap { height: 205px; } .watering-legend { gap: 10px; font-size: 9px; } }
+
+@media (max-width: 640px) {
+  .sidebar { position: sticky; inset: 0 0 auto; width: 100%; height: auto; min-height: 96px; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 5px; padding: 8px 12px 7px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .brand { min-height: 39px; align-self: flex-start; }
+  .brand > span:last-child { display: block; }
+  .main-nav { display: flex; width: 100%; max-width: none; gap: 4px; margin: 0; overflow-x: auto; scrollbar-width: none; }
+  .main-nav::-webkit-scrollbar { display: none; }
+  .nav-item, .nav-item.is-active { display: inline-flex; width: auto; min-width: max-content; min-height: 40px; justify-content: center; gap: 7px; padding: 0 11px; font-size: 12px; }
+  .nav-icon { width: 18px; font-size: 18px; }
+  .main-content { padding-right: 14px; padding-left: 14px; }
+  .source-badge { min-height: 30px; font-size: 10px; }
+  .eyebrow { font-size: 10px; }
+  .heading-subtitle { font-size: 14px; }
+  .health-status { font-size: 12px; }
+  .health-card p { font-size: 12px; }
+  .text-link { font-size: 12px; }
+  .metric-name { font-size: 11px; }
+  .metric-bottom { font-size: 10px; }
+  .updated-label, .chart-subtitle { font-size: 11px; }
+  .chart-y-label { font-size: 12px; }
+  .chart-axis { font-size: 10px; }
+  .chart-tab { min-height: 36px; font-size: 11px; }
+  .simulation-info strong { font-size: 11px; }
+  .simulation-info span, .timeline-time { font-size: 10px; }
+  .watering-legend { font-size: 10px; }
+  .insight-card h3 { font-size: 13px; }
+  .insight-card p:last-child { font-size: 11px; }
+  .page-footer { flex-wrap: wrap; font-size: 10px; }
+}

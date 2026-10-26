@@ -5,3 +5,26 @@
 .profile-field{grid-column:1/-1}.field select{width:100%;height:36px;padding:0 10px;border:1px solid #dcdce1;border-radius:9px;background:#fff;color:var(--ink);font-size:11px}.field select:focus{border-color:#5e9a73;outline:3px solid #1872ce33;outline-offset:2px}
 .brand-mark{overflow:hidden;background:#eaf5ee}.brand-mark img{display:block;width:25px;height:25px;object-fit:contain}
 .history-pagination{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:12px;color:var(--muted);font-size:11px}.history-pagination[hidden]{display:none}.history-pagination .button{min-height:32px}
+
+@media(max-width:680px){
+  .page-shell{padding-right:14px;padding-left:14px}
+  .topbar{height:66px}
+  .brand strong{font-size:15px}
+  .brand small,.back-link{font-size:11px}
+  .page-heading h1{font-size:32px}
+  .subtitle{font-size:14px}
+  .connection-copy h2,.panel-heading h2{font-size:17px}
+  .connection-copy p:last-child,.field span,.form-actions span{font-size:12px}
+  .field input,.field select{height:42px;font-size:13px}
+  .button{min-height:42px;font-size:12px}
+  .device-chip{font-size:10px}
+  .scene-panel,.schedule-panel{padding-right:14px;padding-left:14px}
+  .scene-caption{font-size:12px}
+  .scene-legend{font-size:11px}
+  .status-panel{padding:16px}
+  .color-preview strong,.pump-meta strong{font-size:13px}
+  .color-preview small,.pump-status-panel p,.pump-meta,.last-message-panel small{font-size:11px}
+  th,td{padding:12px 10px;font-size:12px}
+  th{font-size:11px}
+  .schedule-source,.schedule-footnote,.page-footer{font-size:10px}
+}
