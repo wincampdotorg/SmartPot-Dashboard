@@ -193,7 +193,7 @@ h1 { margin-bottom: 4px; font-size: clamp(27px, 3vw, 34px); font-weight: 650; le
   .main-nav { display: flex; width: 100%; max-width: none; gap: 4px; margin: 0; overflow-x: auto; scrollbar-width: none; }
   .main-nav::-webkit-scrollbar { display: none; }
   .nav-item, .nav-item.is-active { display: inline-flex; width: auto; min-width: max-content; min-height: 40px; justify-content: center; gap: 7px; padding: 0 11px; font-size: 12px; }
-  .nav-item:not(.is-active) { font-size: 12px; }
+  .sidebar .main-nav .nav-item:not(.is-active) { font-size: 12px; white-space: nowrap; }
   .nav-icon { width: 18px; font-size: 18px; }
   .main-content { padding-right: 14px; padding-left: 14px; }
   .source-badge { min-height: 30px; font-size: 10px; }
