@@ -14,7 +14,8 @@
     'soil-note', 'water-note', 'spark-soil', 'spark-temp', 'spark-humidity', 'spark-water', 'spark-battery',
     'chart-title', 'chart-current', 'chart-period', 'trend-chart', 'axis-start', 'axis-quarter1', 'axis-mid', 'axis-quarter3', 'axis-end', 'play-button',
     'timeline', 'timeline-time', 'simulation-label', 'insight-title', 'insight-description', 'device-state',
-    'device-description', 'notice', 'connection-note'
+    'device-description', 'notice', 'connection-note', 'watering-chart', 'watering-total',
+    'watering-history-source', 'watering-history-source-label', 'watering-chart-summary'
   ].map((id) => [id, document.getElementById(id)]));
 
   let records = [];
@@ -24,6 +25,16 @@
   let playFrame = 0;
   let playStartedAt = 0;
   let playStartIndex = 0;
+  let wateringEvents = [];
+  let wateringClient = null;
+  const WATERING_HISTORY_KEY = 'smartpot-actuator-history-v1';
+  const WATERING_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+  const WATERING_MQTT = {
+    url: 'wss://af2f1247.ala.asia-southeast1.emqxsl.com:8084/mqtt',
+    username: 'binusiotgroup10',
+    password: 'binusiotgroup10'
+  };
+  const HOUR_MS = 60 * 60 * 1000;
   const numberFmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const dateFmt = new Intl.DateTimeFormat('id-ID', { timeZone: WIB, day: 'numeric', month: 'short', year: 'numeric' });
   const timeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: WIB, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -138,6 +149,146 @@
     node.textContent = text;
     parent.append(node);
     return node;
+  }
+
+  function setWateringSource(mode, label) {
+    els['watering-history-source'].classList.remove('is-live', 'is-error', 'is-preview');
+    els['watering-history-source'].classList.add(mode);
+    els['watering-history-source-label'].textContent = label;
+  }
+
+  function normalizeWateringEvents(events) {
+    const cutoff = Date.now() - WATERING_WINDOW_MS;
+    const byId = new Map();
+    events.forEach((event) => {
+      const timestamp = typeof event?.timestamp === 'number' ? event.timestamp : Date.parse(event?.timestamp);
+      if (!event || !Number.isFinite(timestamp) || timestamp < cutoff || timestamp > Date.now() + 5 * 60 * 1000) return;
+      const normalized = { ...event, timestamp, waterLevel: Number(event.waterLevel ?? event.water_level) };
+      const key = String(event.id ?? `${timestamp}:${event.source || ''}:${normalized.waterLevel}:${event.outcome || ''}`);
+      byId.set(key, normalized);
+    });
+    return [...byId.values()].sort((a, b) => b.timestamp - a.timestamp).slice(0, 500);
+  }
+
+  function persistWateringEvents() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(WATERING_HISTORY_KEY) || '{}');
+      localStorage.setItem(WATERING_HISTORY_KEY, JSON.stringify({ ...saved, watering: wateringEvents }));
+    } catch (_) { /* Keep the live chart usable when browser storage is unavailable. */ }
+  }
+
+  function renderWateringChart() {
+    const svg = els['watering-chart'];
+    svg.replaceChildren();
+    const currentHour = Math.floor(Date.now() / HOUR_MS);
+    const firstHour = currentHour - 23;
+    const buckets = Array.from({ length: 24 }, () => ({ success: 0, low: 0 }));
+    const events = wateringEvents.filter((event) => {
+      const hour = Math.floor(event.timestamp / HOUR_MS);
+      return hour >= firstHour && hour <= currentHour;
+    });
+
+    events.forEach((event) => {
+      const hour = Math.floor(event.timestamp / HOUR_MS);
+      const bucket = buckets[hour - firstHour];
+      if (Number(event.waterLevel) <= 20) bucket.low += 1;
+      else bucket.success += 1;
+    });
+
+    const successCount = events.filter((event) => Number(event.waterLevel) > 20).length;
+    const lowCount = events.length - successCount;
+    els['watering-total'].textContent = `${events.length} ${events.length === 1 ? 'tindakan' : 'tindakan'}`;
+    els['watering-chart-summary'].textContent = wateringEvents.length
+      ? `${successCount} sukses menyiram · ${lowCount} tertahan karena air ≤20% · ${wateringEvents.length} catatan dalam 3 hari.`
+      : 'Belum ada catatan penyiraman dari perangkat dalam 3 hari terakhir.';
+
+    if (!events.length) {
+      svg.setAttribute('aria-label', 'Belum ada penyiraman dalam 24 jam terakhir.');
+      addSvgText(svg, 500, 118, wateringEvents.length ? 'Tidak ada penyiraman dalam 24 jam terakhir' : 'Menunggu riwayat penyiraman dari perangkat', 'chart-y-label', 'middle');
+      return;
+    }
+
+    const plot = { left: 52, right: 986, top: 18, bottom: 185 };
+    const maxBucket = Math.max(...buckets.map((bucket) => bucket.success + bucket.low), 1);
+    const scaleMax = Math.max(2, Math.ceil(maxBucket / 2) * 2);
+    const plotHeight = plot.bottom - plot.top;
+    const slotWidth = (plot.right - plot.left) / 24;
+    const barWidth = Math.min(21, slotWidth * 0.56);
+
+    for (let step = 0; step <= 2; step += 1) {
+      const value = scaleMax - (scaleMax * step / 2);
+      const y = plot.top + (plotHeight * step / 2);
+      svg.append(svgEl('line', { x1: plot.left, y1: y, x2: plot.right, y2: y, class: 'grid-line' }));
+      addSvgText(svg, plot.left - 10, y + 4, String(value), 'chart-y-label', 'end');
+    }
+
+    buckets.forEach((bucket, index) => {
+      const x = plot.left + (index * slotWidth) + ((slotWidth - barWidth) / 2);
+      const successHeight = (bucket.success / scaleMax) * plotHeight;
+      const lowHeight = (bucket.low / scaleMax) * plotHeight;
+      const total = bucket.success + bucket.low;
+      if (successHeight > 0) svg.append(svgEl('rect', { x, y: plot.bottom - successHeight, width: barWidth, height: successHeight, rx: 3, fill: '#4d966d' }));
+      if (lowHeight > 0) svg.append(svgEl('rect', { x, y: plot.bottom - successHeight - lowHeight, width: barWidth, height: lowHeight, rx: 3, fill: '#d45e5e' }));
+      if (total > 0) {
+        const bar = svgEl('g', { 'aria-label': `${wibTime((firstHour + index) * HOUR_MS)} WIB · ${bucket.success} sukses · ${bucket.low} air rendah` });
+        const title = svgEl('title');
+        title.textContent = `${wibTime((firstHour + index) * HOUR_MS)} WIB · ${bucket.success} sukses · ${bucket.low} air rendah`;
+        bar.append(title);
+        svg.append(bar);
+      }
+      if (index % 4 === 0) addSvgText(svg, x + (barWidth / 2), 212, wibTime((firstHour + index) * HOUR_MS), 'chart-y-label', 'middle');
+    });
+
+    svg.setAttribute('aria-label', `Grafik penyiraman per jam dalam 24 jam terakhir: ${successCount} sukses dan ${lowCount} air rendah.`);
+  }
+
+  function restoreWateringHistory() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(WATERING_HISTORY_KEY) || '{}');
+      wateringEvents = normalizeWateringEvents(Array.isArray(saved.watering) ? saved.watering : []);
+    } catch (_) { wateringEvents = []; }
+    renderWateringChart();
+    setWateringSource(wateringEvents.length ? 'is-preview' : 'is-preview', wateringEvents.length ? 'Cache lokal · menyambungkan' : 'Menunggu riwayat MQTT');
+  }
+
+  function acceptWateringSnapshot(raw) {
+    let payload;
+    try { payload = JSON.parse(raw); } catch (_) { return; }
+    if (!payload || payload.type !== 'snapshot' || !Array.isArray(payload.events)) return;
+    wateringEvents = normalizeWateringEvents([...wateringEvents, ...payload.events]);
+    persistWateringEvents();
+    renderWateringChart();
+    setWateringSource('is-live', 'Riwayat MQTT langsung');
+  }
+
+  function connectWateringHistory() {
+    if (!window.mqtt) {
+      setWateringSource('is-error', 'Library MQTT tidak tersedia');
+      return;
+    }
+    const clientId = `SmartPotHome_${Math.random().toString(16).slice(2, 12)}`;
+    wateringClient = window.mqtt.connect(WATERING_MQTT.url, {
+      clientId,
+      username: WATERING_MQTT.username,
+      password: WATERING_MQTT.password,
+      protocolVersion: 4,
+      clean: true,
+      connectTimeout: 10000,
+      reconnectPeriod: 3000,
+      keepalive: 30
+    });
+    wateringClient.on('connect', () => {
+      setWateringSource('is-live', 'Terhubung · memuat riwayat');
+      wateringClient.subscribe('smartpot/history/watering', { qos: 1 }, (error) => {
+        if (error) setWateringSource('is-error', 'Gagal berlangganan riwayat');
+      });
+    });
+    wateringClient.on('message', (topic, payload) => {
+      if (topic === 'smartpot/history/watering') acceptWateringSnapshot(payload.toString());
+    });
+    wateringClient.on('reconnect', () => setWateringSource('is-preview', 'Menyambungkan ulang · cache lokal'));
+    wateringClient.on('offline', () => setWateringSource('is-preview', wateringEvents.length ? 'Offline · menampilkan cache' : 'Menunggu koneksi MQTT'));
+    wateringClient.on('error', () => setWateringSource('is-error', wateringEvents.length ? 'MQTT gagal · cache ditampilkan' : 'Koneksi MQTT gagal'));
   }
 
   function makeLinePath(values, xFor, yFor) {
@@ -297,5 +448,7 @@
   document.querySelector('.eyebrow').firstChild.textContent = new Intl.DateTimeFormat('id-ID', { timeZone: WIB, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date()).toLocaleUpperCase('id-ID');
   const localHour = Number(new Intl.DateTimeFormat('en-US', { timeZone: WIB, hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
   document.getElementById('welcome-title').firstChild.textContent = `${localHour < 11 ? 'Selamat pagi' : localHour < 15 ? 'Selamat siang' : localHour < 18 ? 'Selamat sore' : 'Selamat malam'} `;
+  restoreWateringHistory();
+  connectWateringHistory();
   loadData();
 })();

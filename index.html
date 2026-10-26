@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f5f7">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self' https://unpkg.com; img-src 'self' data:; connect-src 'self' wss:; base-uri 'self'; form-action 'self'; object-src 'none'">
   <title>SmartPot — Ringkasan</title>
   <link rel="stylesheet" href="dashboard.css">
+  <script src="https://unpkg.com/mqtt@5.16.1/dist/mqtt.min.js" crossorigin="anonymous" defer></script>
   <script src="dashboard.js" defer></script>
 </head>
 <body>
@@ -91,6 +92,16 @@
           <input id="timeline" type="range" min="0" max="1439" value="1439" aria-label="Posisi waktu simulasi" aria-valuetext="Sekarang">
           <span class="timeline-time" id="timeline-time">—</span>
         </div>
+      </section>
+
+      <section class="chart-card watering-chart-card" aria-labelledby="watering-chart-title">
+        <div class="chart-header">
+          <div><p class="eyebrow">AKTIVITAS PERANGKAT · MQTT</p><h2 id="watering-chart-title">Riwayat penyiraman <span class="chart-current" id="watering-total">— tindakan</span></h2><p class="chart-subtitle" id="watering-chart-period">Jumlah penyiraman per jam · 24 jam terakhir · WIB</p></div>
+          <span class="source-badge is-preview" id="watering-history-source"><span class="status-dot"></span><span id="watering-history-source-label">Menunggu riwayat MQTT</span></span>
+        </div>
+        <div class="watering-legend" aria-label="Keterangan grafik"><span><i class="watering-success-key"></i>Sukses menyiram</span><span><i class="watering-low-key"></i>Air rendah (≤20%)</span></div>
+        <div class="chart-wrap watering-chart-wrap"><svg id="watering-chart" viewBox="0 0 1000 240" role="img" aria-label="Grafik riwayat penyiraman menunggu data perangkat"></svg></div>
+        <p class="chart-subtitle watering-chart-summary" id="watering-chart-summary" role="status" aria-live="polite">Grafik menampilkan catatan aktual dari perangkat SmartPot.</p>
       </section>
 
       <section class="bottom-grid" id="riwayat">
