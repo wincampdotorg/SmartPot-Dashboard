@@ -19,7 +19,15 @@
   ].map((id) => [id, document.getElementById(id)]));
 
   let records = [];
-  let source = 'snapshot';
+  let historyPage = 0;
+  let loading = false;
+  let requestId = 0;
+  let requestAbort = null;
+  let lastError = '';
+  const historySource = document.getElementById('history-source');
+  const historyHours = document.getElementById('history-hours');
+  const API_URL = 'https://wincamp.web.id/smartpot/api/telemetry';
+  const isSimulation = () => historySource.value === 'simulation';
   let selectedMetric = 'soil_moisture';
   let cursorIndex = 0;
   let playFrame = 0;
@@ -46,103 +54,114 @@
     return el;
   };
 
-  function seededNoiseFactory(seed) {
-    return () => {
-      seed = (seed * 1664525 + 1013904223) >>> 0;
-      return seed / 4294967296;
-    };
-  }
-
-  function makePreviewData() {
-    const random = seededNoiseFactory(310726);
-    const end = Math.floor(Date.now() / 60000) * 60000;
-    const start = end - (1439 * 60000);
-    let tempNoise = 0;
-    let humidityNoise = 0;
-    let soil = 56;
-    let water = 95;
-    let battery = 96;
-    const data = [];
-    for (let i = 0; i < 1440; i += 1) {
-      const hour = new Date(start + (i * 60000)).getUTCHours() + 7;
-      const normalizedHour = hour % 24;
-      const ts = start + (i * 60000);
-      tempNoise = (0.72 * tempNoise) + ((random() - 0.5) * 0.72);
-      humidityNoise = (0.66 * humidityNoise) + ((random() - 0.5) * 2.4);
-      const temperature = 28 + (3.7 * Math.sin((normalizedHour - 8) * Math.PI / 12)) + tempNoise;
-      const humidity = 78 - (1.25 * (temperature - 24)) + humidityNoise;
-      if (i === 360 || i === 930) soil += 13;
-      soil -= 0.0065 + (normalizedHour > 9 && normalizedHour < 17 ? 0.006 : 0);
-      soil += (random() - 0.5) * 0.55;
-      soil = Math.max(28, Math.min(74, soil));
-      if (i === 360 || i === 930) water -= 2.7;
-      water = Math.max(48, water - 0.0015 - (random() * 0.002));
-      battery = Math.max(79, battery - 0.007 - (random() * 0.002));
-      data.push({
-        ts,
-        device_id: 'smartpot-01',
-        temperature: Number(temperature.toFixed(1)),
-        humidity: Number(Math.max(48, Math.min(96, humidity)).toFixed(1)),
-        soil_moisture: Number(soil.toFixed(1)),
-        water_level: Number((water + ((random() - 0.5) * 0.28)).toFixed(1)),
-        battery: Number((battery + ((random() - 0.5) * 0.08)).toFixed(1))
-      });
-    }
-    return data;
-  }
-
   function normalizeRows(rows) {
-    if (!Array.isArray(rows)) throw new Error('Format data dari EMQX tidak sesuai.');
+    if (!Array.isArray(rows)) throw new Error('Format riwayat database tidak sesuai.');
     return rows.map((row) => ({
       ...row,
       ts: typeof row.ts === 'number' ? row.ts : Date.parse(row.ts),
-      temperature: Number(row.temperature),
-      humidity: Number(row.humidity),
-      soil_moisture: Number(row.soil_moisture),
-      water_level: Number(row.water_level),
-      battery: Number(row.battery)
-    })).filter((row) => Number.isFinite(row.ts) && ['temperature', 'humidity', 'soil_moisture', 'water_level', 'battery'].every((key) => Number.isFinite(row[key])))
+      temperature: row.temperature == null ? null : Number(row.temperature),
+      humidity: row.humidity == null ? null : Number(row.humidity),
+      soil_moisture: row.soil_moisture == null ? null : Number(row.soil_moisture),
+      water_level: row.water_level == null ? null : Number(row.water_level),
+      battery: row.battery == null ? null : Number(row.battery)
+    })).filter((row) => Number.isFinite(row.ts) && ['temperature', 'humidity', 'soil_moisture', 'water_level', 'battery'].some((key) => Number.isFinite(row[key])))
       .sort((a, b) => a.ts - b.ts);
   }
 
-  async function loadData() {
+  async function loadData(background = false) {
+    const id = ++requestId;
+    if (requestAbort) requestAbort.abort();
+    requestAbort = new AbortController();
+    const timeout = setTimeout(() => requestAbort?.abort(), 12000);
+    loading = true;
+    const wasLatest = cursorIndex >= records.length - 1;
+    const oldTime = records[cursorIndex]?.ts;
+    const url = new URL(API_URL);
+    url.searchParams.set('source', historySource.value);
+    url.searchParams.set('hours', historyHours.value);
+    document.getElementById('history-json').href = url.href;
     els['refresh-button'].classList.add('is-loading');
     els['refresh-button'].disabled = true;
     try {
-      const response = await fetch('data.json', { headers: { Accept: 'application/json' }, cache: 'no-store' });
+      const response = await fetch(url, { cache: 'no-store', credentials: 'omit', signal: requestAbort.signal, ...(background ? { priority: 'low' } : {}) });
       const payload = await response.json();
-      if (!response.ok) throw new Error(`Snapshot gagal dibaca (${response.status}).`);
+      if (!response.ok) throw new Error(payload.error || `Database gagal dibaca (${response.status}).`);
+      if (payload.database !== 'Smartport') throw new Error('Sumber database tidak sesuai.');
       const loaded = normalizeRows(payload.data);
-      if (!loaded.length) throw new Error('Snapshot belum berisi data.');
+      if (id !== requestId) return;
       records = loaded;
-      source = 'snapshot';
-      cursorIndex = records.length - 1;
+      lastError = '';
+      if (!background) historyPage = 0;
+      cursorIndex = background && !wasLatest && oldTime ? Math.max(0, records.findIndex(row => row.ts >= oldTime)) : records.length - 1;
       updateConnectionState();
-      render();
+      if (records.length) render(); else renderEmpty();
+      renderSensorHistory();
+      document.getElementById('database-proof').textContent = `MySQL OVH · Smartport.telemetry · ${payload.count.toLocaleString('id-ID')} catatan · ${isSimulation() ? 'SIMULASI' : 'DATA ALAT'} · diperbarui ${timeFmt.format(new Date(payload.server_time))} WIB${payload.truncated ? ' · menampilkan 5.000 catatan terbaru' : ''}`;
     } catch (error) {
-      records = makePreviewData();
-      source = 'preview';
-      cursorIndex = records.length - 1;
+      if (id !== requestId) return;
+      lastError = 'Database belum dapat dimuat. Tekan Muat ulang untuk mencoba kembali.';
       updateConnectionState();
-      render();
+      if (!records.length) renderEmpty();
+      renderSensorHistory();
+      document.getElementById('database-proof').textContent = lastError;
     } finally {
-      els['refresh-button'].classList.remove('is-loading');
-      els['refresh-button'].disabled = false;
+      clearTimeout(timeout);
+      if (id === requestId) {
+        loading = false;
+        els['refresh-button'].classList.remove('is-loading');
+        els['refresh-button'].disabled = false;
+      }
     }
   }
 
   function updateConnectionState() {
-    els['source-badge'].classList.remove('is-live', 'is-error');
-    els['source-badge'].classList.add('is-preview');
-    els['source-label'].textContent = source === 'snapshot' ? 'Snapshot simulasi' : 'Pratinjau simulasi';
+    els['source-badge'].classList.remove('is-live', 'is-error', 'is-preview');
+    els['source-badge'].classList.add(lastError ? 'is-error' : isSimulation() ? 'is-preview' : 'is-live');
+    els['source-label'].textContent = lastError ? 'Gagal memuat database' : isSimulation() ? 'Simulasi · MySQL OVH' : 'Riwayat alat · MySQL OVH';
     els['connection-note'].hidden = false;
-    els['connection-note'].textContent = source === 'snapshot'
-      ? 'Data pada situs publik ini adalah snapshot simulasi 24 jam, bukan pembacaan langsung dari EMQX atau perangkat.'
-      : 'File snapshot tidak tersedia; grafik memakai pratinjau simulasi lokal.';
+    els['connection-note'].textContent = lastError || (isSimulation()
+      ? 'SIMULASI: data tiga hari disimpan di MySQL OVH, interval satu menit. Pilih Data alat untuk melihat pembacaan ESP32.'
+      : 'Data asli dari MQTT disimpan di MySQL OVH. Riwayat diperbarui setiap 30 detik; data simulasi dipisahkan.');
+  }
+
+  function renderEmpty() {
+    ['metric-soil','metric-temp','metric-humidity','metric-water','metric-battery','chart-current'].forEach(key => { els[key].textContent = '—'; });
+    ['spark-soil','spark-temp','spark-humidity','spark-water','spark-battery','trend-chart'].forEach(key => els[key].replaceChildren());
+    els['updated-label'].textContent = lastError ? 'Data tidak tersedia' : 'Belum ada data dalam periode ini';
+    els['health-state'].textContent = 'Menunggu telemetry';
+    els['health-title'].textContent = 'Belum ada pembacaan sensor.';
+    els['health-description'].textContent = lastError || 'Hubungkan alat ke profil SmartPotIoTBinusGroup10 dan kirim ke topik smartpot/telemetry.';
+    els['device-state'].textContent = 'Menunggu data alat';
+    els['device-description'].textContent = 'Belum ada telemetry pada periode yang dipilih.';
+    els['chart-period'].textContent = `${Number(historyHours.value)/24} hari terakhir · belum ada data`;
+    els['insight-title'].textContent = 'Menunggu data';
+    els['insight-description'].textContent = 'Analisis tersedia setelah telemetry masuk.';
+    ['axis-start','axis-quarter1','axis-mid','axis-quarter3','axis-end','timeline-time'].forEach(key => { els[key].textContent = '—'; });
+    els['timeline'].disabled = true;
+    els['play-button'].disabled = true;
+  }
+
+  function renderSensorHistory() {
+    const totalPages = Math.max(1, Math.ceil(records.length/10));
+    historyPage = Math.min(historyPage, totalPages-1);
+    const tbody = document.getElementById('sensor-history-rows');
+    tbody.replaceChildren();
+    const end = records.length-historyPage*10;
+    records.slice(Math.max(0,end-10),end).reverse().forEach(row => {
+      const tr = document.createElement('tr');
+      [dateTimeFmt.format(new Date(row.ts)), ...['temperature','humidity','soil_moisture','water_level','battery'].map(key => fmt(row[key]))].forEach(value => {
+        const cell = document.createElement('td'); cell.textContent = value; tr.append(cell);
+      });
+      tbody.append(tr);
+    });
+    document.getElementById('sensor-history-count').textContent = `${records.length.toLocaleString('id-ID')} catatan · ${isSimulation() ? 'simulasi' : 'data alat'} · 10 data per halaman`;
+    document.getElementById('history-page').textContent = `${historyPage+1} / ${totalPages}`;
+    document.getElementById('history-prev').disabled = historyPage === 0;
+    document.getElementById('history-next').disabled = historyPage >= totalPages-1;
   }
 
   function atCursor() { return records[Math.max(0, Math.min(records.length - 1, cursorIndex))]; }
-  function fmt(value) { return numberFmt.format(value); }
+  function fmt(value) { return Number.isFinite(value) ? numberFmt.format(value) : '—'; }
   function wibTime(ts) { return timeFmt.format(new Date(ts)); }
   function addSvgText(parent, x, y, text, className, anchor = 'start') {
     const node = svgEl('text', { x, y, class: className, 'text-anchor': anchor });
@@ -292,15 +311,17 @@
   }
 
   function makeLinePath(values, xFor, yFor) {
-    return values.map((point, index) => `${index ? 'L' : 'M'}${xFor(index).toFixed(2)},${yFor(point).toFixed(2)}`).join(' ');
+    return values.map((point, index) => Number.isFinite(point) ? `${index && Number.isFinite(values[index-1]) ? 'L' : 'M'}${xFor(index).toFixed(2)},${yFor(point).toFixed(2)}` : '').join(' ');
   }
 
   function drawSparkline(svg, rows, field, color) {
     svg.replaceChildren();
     const values = rows.slice(-36).map((row) => row[field]);
     if (values.length < 2) return;
-    const min = Math.min(...values);
-    const max = Math.max(...values);
+    const finite = values.filter(Number.isFinite);
+    if (!finite.length) return;
+    const min = Math.min(...finite);
+    const max = Math.max(...finite);
     const range = Math.max(max - min, 1);
     const xFor = (index) => 2 + (index * 108 / (values.length - 1));
     const yFor = (value) => 27 - ((value - min) / range) * 22;
@@ -311,7 +332,7 @@
     const svg = els['trend-chart'];
     const metric = METRICS[selectedMetric];
     svg.replaceChildren();
-    svg.setAttribute('aria-label', `${metric.label} selama 24 jam, waktu ${wibTime(atCursor().ts)} WIB menunjukkan ${fmt(atCursor()[selectedMetric])} ${metric.unit}`);
+    svg.setAttribute('aria-label', `${metric.label} selama ${historyHours.value} jam, waktu ${wibTime(atCursor().ts)} WIB menunjukkan ${fmt(atCursor()[selectedMetric])} ${metric.unit}`);
     const defs = svgEl('defs');
     const gradient = svgEl('linearGradient', { id: 'chart-fill', x1: '0', x2: '0', y1: '0', y2: '1' });
     gradient.append(svgEl('stop', { offset: '0%', 'stop-color': metric.color, 'stop-opacity': '.25' }));
@@ -322,7 +343,7 @@
     const plot = { left: 42, right: 991, top: 12, bottom: 234 };
     const min = metric.min;
     const max = metric.max;
-    const xFor = (index) => plot.left + ((plot.right - plot.left) * index / Math.max(records.length - 1, 1));
+    const xFor = (index) => plot.left + (plot.right-plot.left)*(records[index].ts-records[0].ts)/Math.max(1,records[records.length-1].ts-records[0].ts);
     const yFor = (value) => plot.bottom - ((value - min) / (max - min)) * (plot.bottom - plot.top);
     for (let step = 0; step <= 4; step += 1) {
       const y = plot.top + ((plot.bottom - plot.top) * step / 4);
@@ -333,13 +354,13 @@
     const values = records.map((row) => row[selectedMetric]);
     const line = makeLinePath(values, xFor, yFor);
     const area = `${line} L${xFor(values.length - 1)},${plot.bottom} L${xFor(0)},${plot.bottom} Z`;
-    svg.append(svgEl('path', { d: area, fill: 'url(#chart-fill)', class: 'chart-area' }));
+    if (values.every(Number.isFinite)) svg.append(svgEl('path', { d: area, fill: 'url(#chart-fill)', class: 'chart-area' }));
     svg.append(svgEl('path', { d: line, class: 'chart-line', style: `stroke:${metric.color}` }));
 
     const x = xFor(cursorIndex);
     const y = yFor(atCursor()[selectedMetric]);
     svg.append(svgEl('line', { x1: x, y1: plot.top, x2: x, y2: plot.bottom, class: 'chart-x-guide' }));
-    svg.append(svgEl('circle', { cx: x, cy: y, r: 5.5, class: 'chart-cursor', style: `stroke:${metric.color}` }));
+    if (Number.isFinite(atCursor()[selectedMetric])) svg.append(svgEl('circle', { cx: x, cy: y, r: 5.5, class: 'chart-cursor', style: `stroke:${metric.color}` }));
     els['chart-title'].firstChild.textContent = metric.label;
     els['chart-current'].textContent = `${fmt(atCursor()[selectedMetric])} ${metric.unit}`;
     els['chart-period'].textContent = `${dateFmt.format(new Date(records[0].ts))} – ${dateFmt.format(new Date(records[records.length - 1].ts))} · WIB`;
@@ -355,7 +376,7 @@
     document.querySelector('.health-status').classList.toggle('is-warn', !healthy);
     els['health-state'].textContent = healthy ? 'Kondisi dalam rentang' : 'Perlu diperhatikan';
     els['health-title'].textContent = healthy ? 'Tanaman Anda tampak nyaman.' : 'Ada parameter yang perlu dicek.';
-    els['health-description'].textContent = 'Nilai berasal dari simulasi, bukan sensor langsung.';
+    els['health-description'].textContent = isSimulation() ? 'Nilai simulasi tersimpan di database Smartport.' : 'Pembacaan perangkat dari MQTT tersimpan di database Smartport.';
     els['soil-note'].textContent = row.soil_moisture < 35 ? 'Mulai mengering' : row.soil_moisture > 70 ? 'Cukup basah' : 'Dalam rentang';
     els['water-note'].textContent = row.water_level < 25 ? 'Perlu diisi' : 'Reservoir';
   }
@@ -365,14 +386,14 @@
     let largestDrop = 0;
     for (let i = 1; i < records.length; i += 1) {
       const rise = records[i].soil_moisture - records[i - 1].soil_moisture;
-      if (rise >= 4) { irrigations += 1; largestDrop = Math.max(largestDrop, rise); }
+      if (Number.isFinite(records[i].soil_moisture) && Number.isFinite(records[i-1].soil_moisture) && rise >= 4) { irrigations += 1; largestDrop = Math.max(largestDrop, rise); }
     }
     els['insight-title'].textContent = irrigations ? `${irrigations} perubahan kelembapan terdeteksi` : 'Pola penyiraman';
     els['insight-description'].textContent = irrigations
       ? `Lonjakan terbesar ${fmt(largestDrop)}% pada kelembapan tanah dalam periode ini.`
       : 'Belum terlihat lonjakan kelembapan tanah yang menandakan penyiraman.';
-    els['device-state'].textContent = 'Mode simulasi';
-    els['device-description'].textContent = `${records.length.toLocaleString('id-ID')} titik simulasi · data terakhir ${dateTimeFmt.format(new Date(records[records.length - 1].ts))} WIB.`;
+    els['device-state'].textContent = isSimulation() ? 'Simulasi · MySQL OVH' : Date.now()-records[records.length-1].ts > 300000 ? 'Data alat belum diperbarui' : 'Telemetry alat terbaru';
+    els['device-description'].textContent = `${records.length.toLocaleString('id-ID')} catatan database · data terakhir ${dateTimeFmt.format(new Date(records[records.length - 1].ts))} WIB.`;
   }
 
   function render() {
@@ -383,9 +404,11 @@
     els['metric-humidity'].textContent = fmt(row.humidity);
     els['metric-water'].textContent = fmt(row.water_level);
     els['metric-battery'].textContent = fmt(row.battery);
-    els['updated-label'].textContent = source === 'snapshot' ? `Snapshot · ${dateTimeFmt.format(new Date(row.ts))} WIB` : 'Pratinjau simulasi';
-    els['timeline'].value = String(cursorIndex);
+    els['updated-label'].textContent = `${isSimulation() ? 'Simulasi' : 'Sensor'} · ${dateTimeFmt.format(new Date(row.ts))} WIB`;
+    els['timeline'].disabled = false;
+    els['play-button'].disabled = false;
     els['timeline'].max = String(records.length - 1);
+    els['timeline'].value = String(cursorIndex);
     els['timeline-time'].textContent = wibTime(row.ts);
     els['timeline'].setAttribute('aria-valuetext', `${dateFmt.format(new Date(row.ts))} ${wibTime(row.ts)} WIB`);
     renderHealth(row);
@@ -402,9 +425,9 @@
     if (playFrame) cancelAnimationFrame(playFrame);
     playFrame = 0;
     els['play-button'].classList.remove('is-playing');
-    els['play-button'].setAttribute('aria-label', 'Putar simulasi 24 jam dalam 1 menit');
-    els['play-button'].title = 'Putar simulasi 24 jam dalam 1 menit';
-    els['simulation-label'].textContent = 'Putar 24 jam dalam 1 menit';
+    els['play-button'].setAttribute('aria-label', 'Putar riwayat dalam 1 menit');
+    els['play-button'].title = 'Putar riwayat dalam 1 menit';
+    els['simulation-label'].textContent = 'Putar riwayat dalam 1 menit';
   }
 
   function animatePlayback(now) {
@@ -415,13 +438,20 @@
     playFrame = requestAnimationFrame(animatePlayback);
   }
 
-  els['refresh-button'].addEventListener('click', loadData);
+  els['refresh-button'].addEventListener('click', () => { stopPlayback(); loadData(); });
+  [historySource, historyHours].forEach(select => select.addEventListener('change', () => {
+    stopPlayback(); records = []; cursorIndex = 0; historyPage = 0; lastError = ''; renderEmpty(); renderSensorHistory(); loadData();
+  }));
+  document.getElementById('history-prev').addEventListener('click', () => { historyPage--; renderSensorHistory(); });
+  document.getElementById('history-next').addEventListener('click', () => { historyPage++; renderSensorHistory(); });
+  setInterval(() => { if (!document.hidden && !playFrame && !loading) loadData(true); }, 30000);
   els['timeline'].addEventListener('input', () => {
     stopPlayback();
     cursorIndex = Number(els['timeline'].value);
     render();
   });
   els['play-button'].addEventListener('click', () => {
+    if (!records.length) return;
     if (playFrame) { stopPlayback(); return; }
     if (cursorIndex >= records.length - 1) cursorIndex = 0;
     playStartIndex = cursorIndex;
@@ -441,7 +471,7 @@
         tab.classList.toggle('is-selected', selected);
         tab.setAttribute('aria-pressed', String(selected));
       });
-      drawChart();
+      if (records.length) drawChart();
     });
   });
 
