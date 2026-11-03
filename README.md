@@ -2,7 +2,9 @@
 
 Dashboard statis HTML, CSS, dan JavaScript yang diterbitkan melalui GitHub Pages.
 
-- `index.html`: ringkasan sensor dan simulasi data satu hari (1.440 titik per menit). Data ini adalah **simulasi**, bukan data aktual dari ESP32. Demo dan visualisasi perangkat tersedia dari menu samping.
+- `index.html`: grafik dan tabel telemetry dari MySQL OVH (`Smartport.telemetry`) melalui API HTTPS. Pilih Simulasi atau Data alat serta periode 24/48/72 jam. Simulasi tiga hari dibuat satu titik per menit, berlabel terpisah dari alat. Riwayat diperbarui setiap 30 detik, tabel 10 data per halaman. Mode alat menampilkan keadaan kosong saat belum ada telemetry; tidak mengganti data asli dengan simulasi. Kredensial MySQL tetap di OVH.
+
+API baca: `https://wincamp.web.id/smartpot/api/telemetry?source=simulation&hours=72`. Ganti source menjadi `device` untuk alat `smartpot-01`; ID perangkat lain dapat diberikan lewat `device_id`. Timestamp epoch milidetik; UI menggunakan WIB. Maksimal 5.000 baris terbaru. Tidak lagi menggunakan data.json sebagai sumber halaman Ringkasan.
 - `live-demo.html`: pemutaran simulasi data sensor secara real-time.
 - `device.html`: visualisasi perangkat, jadwal harian, serta riwayat penyiraman dan grow light 3 hari dari MQTT over WSS. Profil MQTT web panel terpilih otomatis, dan halaman menyambung kembali saat dibuka atau jaringan pulih. Kredensial web panel tertanam di JavaScript publik sesuai persetujuan pemilik proyek.
 
