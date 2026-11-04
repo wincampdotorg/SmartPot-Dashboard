@@ -1,0 +1,3 @@
+html[data-auth-required]:not([data-authenticated="true"]) body{visibility:hidden}
+.logout-button{min-height:40px;padding:8px 13px;border:1px solid #d8e6dd;border-radius:10px;background:#fff;color:#286b4d;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.logout-button:hover{background:#edf6ef}.logout-button:focus-visible{outline:3px solid #6eb18b;outline-offset:3px}
