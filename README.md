@@ -21,3 +21,9 @@ Visualisasi perangkat dan grafik riwayat penyiraman menggunakan satu sesi MQTT b
 `login.html` memakai akun hardcode `admin` / `admin`. Cookie `smartpot_demo_session` menyimpan penanda login, tanpa password. Pilihan Ingat saya memberi Max-Age 30 hari; tanpa pilihan ini cookie berlaku untuk sesi browser. Cookie memakai SameSite=Lax, path repository dan Secure pada HTTPS. Tombol Keluar menghapus cookie. Ringkasan dan Demo memeriksa sesi sebelum menjalankan pemuatan data/MQTT; tautan Perangkat lama diarahkan ke Ringkasan. Tujuan setelah login dibatasi pada halaman situs sendiri.
 
 Login ini adalah pembatas tampilan untuk tugas kuliah di GitHub Pages. JavaScript, aset dan API baca tetap publik; cookie dapat diubah pengguna. Ini bukan autentikasi server untuk data privat.
+
+## Profil TDR2
+
+Profil TDR2 memakai broker `ifb44421.ala.asia-southeast1.emqxsl.com`, kredensial yang diberikan pemilik, dan otomatis terhubung ketika dipilih. Profil pilihan disimpan di browser; pemasangan baru memakai TDR2. Saat profil berubah, kartu sensor berpindah ke Data alat, status dan riwayat tidak diambil dari profil sebelumnya. Kartu sensor menerima pesan JSON `smartpot/telemetry` secara langsung; API riwayat menggunakan parameter `profile=tdr2` untuk device `smartpot-tdr2`. Broker Web Panel tetap memakai device `smartpot-01`.
+
+Collector TDR2 di OVH berjalan terpisah dan memperbarui satu baris per menit menggunakan telemetry terbaru agar riwayat tiga hari tetap ringkas. Pembacaan 0 adalah nilai valid yang dikirim alat, bukan keadaan kosong.
