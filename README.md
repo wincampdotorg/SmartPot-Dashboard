@@ -35,3 +35,15 @@ Profil MQTT disimpan setelah broker mengonfirmasi koneksi berhasil, bukan saat d
 Klik **Ekspor PDF** pada Ringkasan untuk membuka pratinjau laporan sesuai profil MQTT, sumber data, dan periode 24/48/72 jam yang dipilih. Laporan memuat ringkasan sensor, grafik parameter terpilih, jadwal harian, riwayat penyiraman/grow light, serta semua baris sensor yang dimuat (maksimal 5.000), tanpa mengikuti paginasi tabel. Data simulasi diberi label. Riwayat aktuator mengikuti data MQTT/cache yang tersedia pada browser.
 
 Klik **Simpan sebagai PDF**, lalu pilih tujuan **Save as PDF / Simpan sebagai PDF** pada dialog cetak browser. Pada iPhone/iPad gunakan opsi cetak dan bagikan/simpan PDF dari pratinjau sistem. Format cetak A4 memakai header tabel berulang dan waktu WIB. Ekspor berjalan di browser tanpa pustaka atau layanan PDF tambahan.
+
+## Prediksi dan jadwal rekomendasi AI
+
+Menu **Prediksi AI** di Ringkasan menampilkan enam tahap sensor-ke-rekomendasi, prediksi kelembapan tanah 30/60/120 menit, MAE model vs pembanding, evaluasi terhadap sensor aktual, dan sepuluh evaluasi jadwal terakhir dari database Smartport. Profil dan sumber mengikuti pilihan di bagian Sensor; rentang riwayat 24/48/72 jam tidak mengubah jendela latihan model 14 hari. Worker OVH berjalan setiap lima menit meskipun browser ditutup; halaman memperbarui pembacaan hasil setiap menit saat aktif.
+
+Endpoint baca: `https://wincamp.web.id/smartpot/api/ai?profile=tdr2&source=device`. Mode **recommendation_only**: kandidat AI tidak diterbitkan ke ESP32 dan tidak mengganti jadwal harian manual. Waktu belum ditentukan ketika kalibrasi/data/model belum layak. Simulasi adalah replay dari akhir data historis, memakai batas demonstrasi 45%, bukan kondisi pot sekarang. Model regresi ridge dilatih per sumber/perangkat; model yang gagal mengungguli pembanding diberi label belum layak. Data simulasi tidak dipakai sebagai fallback alat. Hasil AI ikut disertakan di Ekspor PDF.
+
+Tabel dan grafik memiliki area gulir sendiri pada ponsel, tanpa mengecilkan teks seluruh dashboard. Pesan error mempertahankan hasil sebelumnya hanya untuk profil/sumber yang sama.
+
+Panel AI juga menampilkan **Waktu event · 24 jam terakhir** (10 data per halaman) dan **Rekomendasi jadwal besok**. Event ditulis langsung oleh collector ke MySQL saat pesan/transisi terjadi. Grow light OFF terpisah; perubahan RGB tidak membuat jadwal. Kombinasi Pump + Grow light ditandai berdasarkan kedekatan ≤5 detik, dengan bukti penggabungan ditampilkan. Riwayat lama tetap tersimpan. Waktu event lama yang tidak dapat dikaitkan ke broker secara pasti tidak diarang atau di-backfill.
+
+Rencana besok memakai pengelompokan pola waktu 24 jam, terpisah dari regresi kelembapan 30/60/120 menit. Median jam/menit dipersistenkan di Smartport.ai_daily_plans; satu hari tetap berstatus rencana awal untuk ditinjau. Ponsel Android dapat membaca data yang sama dari menu Schedule. Perubahan status MQTT memperbarui pembacaan panel setelah jeda singkat untuk commit database; rencana besok diperbarui worker setiap lima menit. Ekspor PDF menyertakan rencana besok.
