@@ -75,6 +75,17 @@
     const light = device.growLight.filter(inRange);
     node('h2', `Riwayat grow light · ${light.length} catatan`);
     table(['Waktu WIB','Status','Warna RGB'],light.map(row=>[when(row.timestamp), enabled(row.state) ? 'Menyala' : 'Mati', `${row.red ?? '—'}, ${row.green ?? '—'}, ${row.blue ?? '—'}`]));
+    const ai = snapshot.ai;
+    if (ai?.run) {
+      node('h2', 'Prediksi AI & jadwal rekomendasi');
+      node('p', `${ai.source === 'simulation' ? 'SIMULASI HISTORIS' : 'DATA ALAT'} · Regresi ridge multivariat · Latihan hingga 14 hari · Mode rekomendasi, tanpa eksekusi pompa.`, report, 'pdf-note');
+      node('p', ai.run.report.reason, report, 'pdf-note');
+      node('h3', `Rekomendasi jadwal besok · ${ai.tomorrow_date || '—'}`);
+      node('p', 'Rencana awal dari pola aktivitas 24 jam; bukan prediksi kelembapan 24 jam. Tidak menjalankan aktuator.', report, 'pdf-note');
+      table(['Jam WIB','Aksi','Pendukung','Status'], (ai.daily_plan || []).map(row => [`${String(row.hour).padStart(2,'0')}.${String(row.minute).padStart(2,'0')}`,row.action==='pump'?'Pump':row.action==='pump_grow_light'?'Pump + Grow light ON':`Grow light ${row.light_state?'ON':'OFF'}`,`${row.sample_count} event`,row.status]));
+      table(['Horizon','Waktu WIB','Prediksi tanah'], ai.predictions.map(row => [`${row.horizon_minutes} menit`,when(row.predicted_for),`${fmt(row.predicted_pct)}%`]));
+      table(['Catatan','Usulan waktu WIB','Status','Alasan'], ai.schedules.map(row => [`#${row.id}`,row.proposed_at == null ? 'Belum ditentukan' : when(row.proposed_at),row.status,row.reason]));
+    }
     node('h2', `Seluruh data sensor · ${rows.length.toLocaleString('id-ID')} catatan`);
     node('p', 'Urutan terbaru ke terlama. Semua catatan yang dimuat untuk profil dan periode terpilih disertakan, bukan hanya halaman tabel yang sedang tampil. Maksimal 5.000 catatan sesuai batas API.', report, 'pdf-note');
     table(['Waktu WIB','Suhu °C','Udara %','Tanah %','Air %','Baterai %'], [...rows].reverse().map(row=>[when(row.ts), ...['temperature','humidity','soil_moisture','water_level','battery'].map(key=>fmt(row[key]))]));
