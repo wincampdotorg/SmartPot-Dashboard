@@ -14,9 +14,11 @@
   <script src="https://unpkg.com/mqtt@5.16.1/dist/mqtt.min.js" crossorigin="anonymous" defer></script>
   <link rel="stylesheet" href="device.css?v=integrated-1">
   <link rel="stylesheet" href="export-pdf.css?v=1">
-  <script src="export-pdf.js?v=1" defer></script>
+  <script src="export-pdf.js?v=ai-1" defer></script>
   <script src="dashboard.js?v=pdf-1" defer></script>
   <script src="device.js?v=pdf-1" defer></script>
+  <link rel="stylesheet" href="ai-dashboard.css?v=1">
+  <script src="ai-dashboard.js?v=1" defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -31,6 +33,7 @@
         <a class="nav-item" href="#sensor"><span class="nav-icon" aria-hidden="true">⌁</span> Sensor</a>
         <a class="nav-item" href="#perangkat"><span class="nav-icon" aria-hidden="true">⌂</span> Perangkat</a>
         <a class="nav-item" href="#grafik"><span class="nav-icon" aria-hidden="true">◷</span> Analisis tren</a>
+        <a class="nav-item" href="#prediksi-ai"><span class="nav-icon" aria-hidden="true">✧</span> Prediksi AI</a>
         <a class="nav-item" href="live-demo.html"><span class="nav-icon" aria-hidden="true">◉</span> Demo real-time</a>
       </nav>
       <div class="sidebar-bottom">
@@ -194,6 +197,35 @@
           <span class="timeline-time" id="timeline-time">—</span>
         </div>
       </section>
+
+    <section class="ai-panel" id="prediksi-ai" aria-labelledby="ai-title">
+      <div class="ai-heading"><div><p class="eyebrow">PREDIKSI & PENJADWALAN</p><h2 id="ai-title">Asisten penyiraman AI</h2></div><button id="ai-refresh" class="btn btn-outline-success" type="button">Muat ulang AI</button></div>
+      <p class="ai-note">Mengikuti profil MQTT dan sumber data di bagian Sensor. Model memakai hingga 14 hari data pada interval lima menit. Jadwal rekomendasi dibuat oleh worker server dan tetap tersimpan saat browser ditutup.</p>
+      <p id="ai-error" class="ai-error" role="status" hidden></p>
+      <div id="ai-results" hidden>
+        <p id="ai-summary" class="ai-warning"></p>
+        <div class="ai-stats"><div class="ai-stat"><span>Status model</span><strong id="ai-model-state">—</strong></div><div class="ai-stat"><span>Data latihan tersedia</span><strong id="ai-data-count">—</strong></div><div class="ai-stat"><span>Usulan waktu · satu kali</span><strong id="ai-next-time">—</strong></div></div>
+        <h3>Enam tahap pengolahan</h3>
+        <ol class="ai-steps"><li>Sensor → MySQL<small id="ai-flow-1"></small></li><li>Arsip perawatan<small id="ai-flow-2"></small></li><li>Belajar dari riwayat<small id="ai-flow-3"></small></li><li>Prediksi 30 / 60 / 120 menit<small id="ai-flow-4"></small></li><li>Simpan jadwal rekomendasi<small id="ai-flow-5"></small></li><li>Periksa kondisi kembali<small id="ai-flow-6"></small></li></ol>
+        <p id="ai-model-note" class="ai-note"></p>
+        <h3 id="ai-observed-title">Waktu event · 24 jam terakhir</h3>
+        <p id="ai-observed-note" class="ai-note"></p>
+        <div class="ai-table-wrap" tabindex="0" role="region" aria-labelledby="ai-observed-title"><table><thead><tr><th scope="col">Waktu WIB</th><th scope="col">Aksi</th><th scope="col">Bukti event</th></tr></thead><tbody id="ai-observed-rows"></tbody></table></div>
+        <nav class="d-flex justify-content-between align-items-center gap-2 mt-2" aria-label="Halaman waktu event"><button id="ai-events-prev" type="button" class="btn btn-outline-success">Sebelumnya</button><span id="ai-events-page"></span><button id="ai-events-next" type="button" class="btn btn-outline-success">Berikutnya</button></nav>
+        <h3 id="ai-tomorrow-title">Rekomendasi jadwal besok</h3>
+        <p id="ai-tomorrow-note" class="ai-warning"></p>
+        <div class="ai-table-wrap" tabindex="0" role="region" aria-labelledby="ai-tomorrow-title"><table><thead><tr><th scope="col">Jam WIB</th><th scope="col">Aksi</th><th scope="col">Event pendukung</th><th scope="col">Status</th><th scope="col">Alasan</th></tr></thead><tbody id="ai-daily-plan-rows"></tbody></table></div>
+        <h3 id="ai-forecast-title">Prediksi kelembapan tanah</h3>
+        <div class="ai-chart-wrap" tabindex="0" role="region" aria-label="Grafik prediksi, geser ke samping pada ponsel"><svg id="ai-chart" class="ai-chart" viewBox="0 0 800 230" role="img" aria-label="Prediksi kelembapan tanah" hidden></svg></div>
+        <p class="ai-note">Titik pertama: sensor terakhir. Garis putus-putus: prediksi. MAE model / pembanding menunjukkan kesalahan pada data uji setelah data latihan; semakin kecil semakin baik. Pembanding mempertahankan nilai sensor terakhir.</p>
+        <div class="ai-table-wrap" tabindex="0" role="region" aria-labelledby="ai-forecast-title"><table class="ai-prediction-table"><thead><tr><th scope="col">Horizon</th><th scope="col">Waktu WIB</th><th scope="col">Prediksi tanah</th><th scope="col">MAE model / pembanding</th><th scope="col">Kelayakan</th></tr></thead><tbody id="ai-forecast-rows"></tbody></table></div>
+        <h3 id="ai-schedules-title">Evaluasi penyiraman · 30–120 menit</h3><p id="ai-calibration-note" class="ai-note"></p>
+        <div class="ai-table-wrap" tabindex="0" role="region" aria-labelledby="ai-schedules-title"><table><thead><tr><th scope="col">Catatan</th><th scope="col">Usulan waktu WIB</th><th scope="col">Status</th><th scope="col">Alasan</th></tr></thead><tbody id="ai-schedule-rows"></tbody></table></div>
+        <h3 id="ai-evaluation-title">Prediksi vs sensor aktual · 3 hari</h3>
+        <div class="ai-table-wrap" tabindex="0" role="region" aria-labelledby="ai-evaluation-title"><table><thead><tr><th scope="col">Horizon</th><th scope="col">Jumlah pasangan</th><th scope="col">MAE aktual</th></tr></thead><tbody id="ai-evaluation-rows"></tbody></table></div>
+        <p id="ai-proof" class="ai-proof"></p>
+      </div>
+    </section>
 
     <section class="schedule-panel card" aria-labelledby="schedule-title"><div class="panel-heading"><div><p class="eyebrow">SINKRONISASI PERANGKAT</p><h2 id="schedule-title">Jadwal harian</h2></div><span class="schedule-source" id="schedule-source">Menunggu snapshot MQTT</span></div><div class="table-wrap"><table class="table table-hover"><thead><tr><th>Waktu</th><th>Aksi</th><th>Status pompa</th><th>Grow light</th></tr></thead><tbody id="schedule-rows"><tr><td colspan="4" class="empty-row">Hubungkan ke broker untuk menerima jadwal dari ESP32.</td></tr></tbody></table></div><p class="schedule-footnote">Jadwal ditampilkan dari pesan MQTT perangkat. Agar perubahan tetap tersedia setelah dashboard ditutup, SmartPot menerbitkan snapshot retained saat jadwal berubah.</p></section>
     <div class="row g-3 mt-0" aria-label="Riwayat penyiraman dan grow light">
