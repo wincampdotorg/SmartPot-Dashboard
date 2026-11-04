@@ -16,13 +16,15 @@
 
   const HISTORY_STORAGE_KEY = 'smartpot-actuator-history-v1';
   const DEVICE_STATE_STORAGE_KEY = 'smartpot-device-state-v1';
+  const PROFILE_STORAGE_KEY = 'smartpot-mqtt-profile-v1';
+  const historyStorageKey = () => `${HISTORY_STORAGE_KEY}:${els['broker-profile'].value || 'web-panel'}`;
   const MANUAL_DISCONNECT_KEY = 'smartpot-manual-disconnect';
   const HISTORY_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
   const MQTT_PROFILES = {
     tdr2: {
       brokerUrl: 'wss://ifb44421.ala.asia-southeast1.emqxsl.com:8084/mqtt',
-      username: '',
-      password: ''
+      username: 'TDR2',
+      password: '1234567890'
     },
     'web-panel': {
       brokerUrl: 'wss://af2f1247.ala.asia-southeast1.emqxsl.com:8084/mqtt',
@@ -177,7 +179,7 @@
 
   function persistHistory() {
     try {
-      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify({
+      localStorage.setItem(historyStorageKey(), JSON.stringify({
         watering: state.wateringHistory,
         growLight: state.growLightHistory
       }));
@@ -240,7 +242,7 @@
 
   function restoreHistory() {
     try {
-      const saved = parseJson(localStorage.getItem(HISTORY_STORAGE_KEY) || '{}') || {};
+      const saved = parseJson(localStorage.getItem(historyStorageKey()) || (els['broker-profile'].value === 'web-panel' ? localStorage.getItem(HISTORY_STORAGE_KEY) : null) || '{}') || {};
       state.wateringHistory = pruneHistory(Array.isArray(saved.watering) ? saved.watering : []);
       state.growLightHistory = pruneHistory(Array.isArray(saved.growLight) ? saved.growLight : []);
     } catch (_) { /* Begin with empty history if local storage cannot be read. */ }
@@ -298,7 +300,7 @@
 
   function handleMessage(topic, raw) {
     const message = raw.toString();
-    window.dispatchEvent(new CustomEvent('smartpot:mqtt-message', { detail: { topic, message } }));
+    window.dispatchEvent(new CustomEvent('smartpot:mqtt-message', { detail: { topic, message, profile: els['broker-profile'].value } }));
     const payload = parseJson(message);
     markMessage(topic);
 
@@ -391,7 +393,7 @@
     els['connect-button'].disabled = true;
     setConnection('offline', 'Menghubungkan…', 'Membuka sesi MQTT aman ke EMQX.');
     const clientId = `SmartPotWeb_${Math.random().toString(16).slice(2, 12)}`;
-    state.client = window.mqtt.connect(url, {
+    const client = window.mqtt.connect(url, {
       clientId,
       username: els['broker-username'].value.trim() || undefined,
       password: els['broker-password'].value || undefined,
@@ -401,22 +403,26 @@
       reconnectPeriod: 3000,
       keepalive: 30
     });
-    state.client.on('connect', () => {
+    state.client = client;
+    client.on('connect', () => {
+      if (state.client !== client) return;
       els['connect-button'].disabled = true;
       els['disconnect-button'].disabled = false;
       setConnection('live', 'Terhubung ke EMQX', 'Mendengarkan topik smartpot/# untuk status aktual.');
-      state.client.subscribe('smartpot/#', { qos: 1 }, (error) => {
+      client.subscribe('smartpot/#', { qos: 1 }, (error) => {
         if (error) setConnection('error', 'Gagal berlangganan', 'User EMQX perlu izin baca topik smartpot/#.');
       });
     });
-    state.client.on('message', handleMessage);
-    state.client.on('reconnect', () => setConnection('offline', 'Menghubungkan ulang…', 'Sesi MQTT mencoba tersambung kembali.'));
-    state.client.on('offline', () => setConnection('offline', 'Broker tidak tersambung', 'Periksa alamat WSS, jaringan, username, dan password.'));
-    state.client.on('error', (error) => {
+    client.on('message', (topic, raw) => { if (state.client === client) handleMessage(topic, raw); });
+    client.on('reconnect', () => state.client === client && setConnection('offline', 'Menghubungkan ulang…', 'Sesi MQTT mencoba tersambung kembali.'));
+    client.on('offline', () => state.client === client && setConnection('offline', 'Broker tidak tersambung', 'Periksa alamat WSS, jaringan, username, dan password.'));
+    client.on('error', (error) => {
+      if (state.client !== client) return;
       setConnection('error', 'Koneksi gagal', error && error.message ? error.message : 'Periksa alamat WSS dan autentikasi EMQX.');
       els['connect-button'].disabled = false;
     });
-    state.client.on('close', () => {
+    client.on('close', () => {
+      if (state.client !== client) return;
       if (state.client) setConnection('offline', 'Terputus', 'Koneksi MQTT ditutup.');
       els['connect-button'].disabled = false;
       els['disconnect-button'].disabled = true;
@@ -427,12 +433,41 @@
     sessionStorage.setItem(MANUAL_DISCONNECT_KEY, '1');
     disconnect();
   });
+  function resetProfileView() {
+    state.lightOn = null; state.rgb = null; state.water = null;
+    state.schedules = []; state.wateringHistory = []; state.growLightHistory = [];
+    state.wateringPage = 1; state.growLightPage = 1;
+    setPump(false);
+    els['scene-wrap'].classList.remove('light-on','water-low');
+    els['water-status-panel'].classList.remove('water-low');
+    ['light-heading','pump-heading'].forEach(key => { els[key].textContent = 'Menunggu data'; });
+    els['light-state'].textContent = 'Menunggu status grow light';
+    els['pump-state'].textContent = 'Menunggu status pompa';
+    els['water-value'].textContent = '—%';
+    els['scene-water-level'].textContent = '—%';
+    els['water-meter-fill'].style.width = '0%';
+    els['water-warning'].textContent = '';
+    els['rgb-value'].textContent = 'RGB —';
+    els['light-status-note'].textContent = 'Menunggu pesan profil terpilih';
+    els['last-topic'].textContent = 'Belum ada pesan';
+    els['last-message-time'].textContent = '—';
+    els['schedule-source'].textContent = 'Menunggu snapshot MQTT';
+    els['schedule-source'].classList.remove('is-live');
+    restoreDeviceState(); renderSchedules(); restoreHistory();
+  }
   els['broker-profile'].addEventListener('change', (event) => {
+    disconnect();
     applyMqttProfile(event.target.value);
-    restoreDeviceState();
+    try { localStorage.setItem(PROFILE_STORAGE_KEY, event.target.value); } catch (_) {}
+    resetProfileView();
+    window.dispatchEvent(new CustomEvent('smartpot:mqtt-profile', { detail: { profile: event.target.value } }));
+    els['connection-form'].requestSubmit();
   });
-  els['broker-profile'].value = 'web-panel';
-  applyMqttProfile('web-panel');
+  let selectedProfile = 'tdr2';
+  try { const saved = localStorage.getItem(PROFILE_STORAGE_KEY); if (MQTT_PROFILES[saved]) selectedProfile = saved; } catch (_) {}
+  els['broker-profile'].value = selectedProfile;
+  applyMqttProfile(selectedProfile);
+  window.dispatchEvent(new CustomEvent('smartpot:mqtt-profile', { detail: { profile: selectedProfile, initial: true } }));
   els['light-state'].textContent = 'Menunggu status grow light';
   els['pump-state'].textContent = 'Menunggu status pompa';
   els['water-value'].textContent = '—%';
