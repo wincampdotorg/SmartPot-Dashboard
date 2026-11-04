@@ -57,6 +57,7 @@
     els['connection-badge'].classList.add(mode === 'live' ? 'is-live' : mode === 'error' ? 'is-error' : 'is-offline');
     els['connection-label'].textContent = label;
     els['connection-help'].textContent = help;
+    window.dispatchEvent(new CustomEvent('smartpot:mqtt-state', { detail: { mode, label } }));
   }
 
   function applyMqttProfile(profileId) {
@@ -296,6 +297,7 @@
 
   function handleMessage(topic, raw) {
     const message = raw.toString();
+    window.dispatchEvent(new CustomEvent('smartpot:mqtt-message', { detail: { topic, message } }));
     const payload = parseJson(message);
     markMessage(topic);
 
