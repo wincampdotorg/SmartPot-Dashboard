@@ -1,5 +1,6 @@
 (() => {
   'use strict';
+  if (!window.SmartPotAuth?.authenticated) return;
 
   const WIB = 'Asia/Jakarta';
   const METRICS = {
