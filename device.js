@@ -448,6 +448,9 @@
       els['disconnect-button'].disabled = true;
     });
   });
+  window.addEventListener('smartpot:collect-report', event => {
+    event.detail.device = { profile: els['broker-profile'].value, schedules: state.schedules.map(row => ({...row})), watering: pruneHistory(state.wateringHistory).map(row => ({...row})), growLight: pruneHistory(state.growLightHistory).map(row => ({...row})) };
+  });
   window.addEventListener('smartpot:logout', disconnect);
   els['disconnect-button'].addEventListener('click', () => {
     sessionStorage.setItem(MANUAL_DISCONNECT_KEY, '1');
