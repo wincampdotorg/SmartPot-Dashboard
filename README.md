@@ -15,3 +15,9 @@ Aplikasi Android menyimpan riwayat aktuator di SQLite dan menerbitkan snapshot r
 GitHub Pages memakai branch `main` dari root repository.
 
 Visualisasi perangkat dan grafik riwayat penyiraman menggunakan satu sesi MQTT bersama. CSS perangkat dibatasi pada `.device-workspace` agar tampilan Ringkasan dan Bootstrap tetap konsisten.
+
+## Login demo
+
+`login.html` memakai akun hardcode `admin` / `admin`. Cookie `smartpot_demo_session` menyimpan penanda login, tanpa password. Pilihan Ingat saya memberi Max-Age 30 hari; tanpa pilihan ini cookie berlaku untuk sesi browser. Cookie memakai SameSite=Lax, path repository dan Secure pada HTTPS. Tombol Keluar menghapus cookie. Ringkasan dan Demo memeriksa sesi sebelum menjalankan pemuatan data/MQTT; tautan Perangkat lama diarahkan ke Ringkasan. Tujuan setelah login dibatasi pada halaman situs sendiri.
+
+Login ini adalah pembatas tampilan untuk tugas kuliah di GitHub Pages. JavaScript, aset dan API baca tetap publik; cookie dapat diubah pengguna. Ini bukan autentikasi server untuk data privat.
