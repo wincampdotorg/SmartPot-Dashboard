@@ -19,6 +19,8 @@
   const PROFILE_STORAGE_KEY = 'smartpot-mqtt-profile-v1';
   const historyStorageKey = () => `${HISTORY_STORAGE_KEY}:${els['broker-profile'].value || 'web-panel'}`;
   const MANUAL_DISCONNECT_KEY = 'smartpot-manual-disconnect';
+  const PROFILE_COOKIE = 'smartpot_mqtt_profile';
+  const profileCookiePath = new URL('.', document.currentScript.src).pathname;
   const HISTORY_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
   const MQTT_PROFILES = {
     tdr2: {
@@ -36,6 +38,22 @@
   const timeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
   const dateTimeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
   const truthy = (value) => value === true || value === 1 || /^(on|true|1|yes)$/i.test(String(value));
+
+  function saveConnectedProfile(profileId) {
+    if (!MQTT_PROFILES[profileId]) return;
+    try { localStorage.setItem(PROFILE_STORAGE_KEY, profileId); } catch (_) {}
+    try { sessionStorage.setItem(PROFILE_STORAGE_KEY, profileId); } catch (_) {}
+    document.cookie = `${PROFILE_COOKIE}=${profileId}; Max-Age=2592000; Path=${profileCookiePath}; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`;
+  }
+
+  function restoreConnectedProfile() {
+    const cookie = document.cookie.split(';').map(part => part.trim()).find(part => part.startsWith(`${PROFILE_COOKIE}=`));
+    const fromCookie = cookie?.slice(PROFILE_COOKIE.length + 1);
+    if (MQTT_PROFILES[fromCookie]) return fromCookie;
+    try { const saved = localStorage.getItem(PROFILE_STORAGE_KEY); if (MQTT_PROFILES[saved]) return saved; } catch (_) {}
+    try { const saved = sessionStorage.getItem(PROFILE_STORAGE_KEY); if (MQTT_PROFILES[saved]) return saved; } catch (_) {}
+    return 'tdr2';
+  }
 
   function deviceStateStorageKey(type) {
     return `${DEVICE_STATE_STORAGE_KEY}:${els['broker-profile'].value || 'default'}:${type}`;
@@ -392,6 +410,7 @@
     }
     els['connect-button'].disabled = true;
     setConnection('offline', 'Menghubungkan…', 'Membuka sesi MQTT aman ke EMQX.');
+    const profileId = els['broker-profile'].value;
     const clientId = `SmartPotWeb_${Math.random().toString(16).slice(2, 12)}`;
     const client = window.mqtt.connect(url, {
       clientId,
@@ -406,9 +425,10 @@
     state.client = client;
     client.on('connect', () => {
       if (state.client !== client) return;
+      saveConnectedProfile(profileId);
       els['connect-button'].disabled = true;
       els['disconnect-button'].disabled = false;
-      setConnection('live', 'Terhubung ke EMQX', 'Mendengarkan topik smartpot/# untuk status aktual.');
+      setConnection('live', 'Terhubung ke EMQX', `Profil ${profileId === 'tdr2' ? 'TDR2' : 'SmartPot Web Panel'} tersimpan. Koneksi dipulihkan otomatis setelah refresh.`);
       client.subscribe('smartpot/#', { qos: 1 }, (error) => {
         if (error) setConnection('error', 'Gagal berlangganan', 'User EMQX perlu izin baca topik smartpot/#.');
       });
@@ -458,13 +478,11 @@
   els['broker-profile'].addEventListener('change', (event) => {
     disconnect();
     applyMqttProfile(event.target.value);
-    try { localStorage.setItem(PROFILE_STORAGE_KEY, event.target.value); } catch (_) {}
     resetProfileView();
     window.dispatchEvent(new CustomEvent('smartpot:mqtt-profile', { detail: { profile: event.target.value } }));
     els['connection-form'].requestSubmit();
   });
-  let selectedProfile = 'tdr2';
-  try { const saved = localStorage.getItem(PROFILE_STORAGE_KEY); if (MQTT_PROFILES[saved]) selectedProfile = saved; } catch (_) {}
+  const selectedProfile = restoreConnectedProfile();
   els['broker-profile'].value = selectedProfile;
   applyMqttProfile(selectedProfile);
   window.dispatchEvent(new CustomEvent('smartpot:mqtt-profile', { detail: { profile: selectedProfile, initial: true } }));
