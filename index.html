@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="dashboard.css?v=mobile-bootstrap-3">
   <script src="https://unpkg.com/mqtt@5.16.1/dist/mqtt.min.js" crossorigin="anonymous" defer></script>
   <link rel="stylesheet" href="device.css?v=integrated-1">
-  <script src="dashboard.js?v=login-1" defer></script>
+  <script src="dashboard.js?v=remove-health-1" defer></script>
   <script src="device.js?v=login-1" defer></script>
 </head>
 <body>
@@ -77,17 +77,6 @@
         <a id="history-json" class="text-link" href="https://wincamp.web.id/smartpot/api/telemetry?source=simulation&amp;hours=72" target="_blank" rel="noopener">Buka data JSON dari database ↗</a>
       </section>
 
-      <section class="health-card" aria-labelledby="health-title">
-        <div class="health-copy">
-          <div class="health-status"><span class="health-indicator" aria-hidden="true"></span><span id="health-state">Kondisi terpantau</span></div>
-          <h2 id="health-title">Tanaman Anda tumbuh dengan baik.</h2>
-          <p id="health-description">Semua parameter utama berada dalam rentang pemantauan.</p>
-          <a class="text-link" href="#grafik">Lihat tren hari ini <span aria-hidden="true">↗</span></a>
-        </div>
-        <div class="health-art" aria-hidden="true">
-          <div class="sun-orb"></div><div class="leaf leaf-one"></div><div class="leaf leaf-two"></div><div class="leaf leaf-three"></div><div class="stem"></div><div class="pot"><span></span></div>
-        </div>
-      </section>
       <div class="connection-note" id="connection-note" role="status" hidden></div>
 
       <section class="metrics-section" aria-labelledby="metrics-title">
