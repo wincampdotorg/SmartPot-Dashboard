@@ -23,6 +23,7 @@
     const svg=byId('ai-chart'); svg.replaceChildren();
     const predictions=payload.predictions, latest=payload.run?.report.latest;
     svg.hidden=!predictions.length || !latest || !Number.isFinite(latest.soil_moisture);
+    svg.parentElement.hidden=svg.hidden;
     if(svg.hidden) return;
     const points=[{t:payload.run.data_as_of,value:latest.soil_moisture},...predictions.map(f=>({t:f.predicted_for,value:f.predicted_pct}))];
     const start=points[0].t, span=Math.max(1,points[points.length-1].t-start);
@@ -49,9 +50,9 @@
     byId('ai-events-prev').disabled=observedPage<=1;
     byId('ai-events-next').disabled=observedPage>=(payload.events_pages || 1);
     byId('ai-events-page').textContent=`${observedPage} / ${payload.events_pages || 1}`;
-    byId('ai-observed-note').textContent=`${payload.observed_count || 0} event · ${when(payload.evidence_window_start)} – ${when(payload.evidence_window_end)}. Jam dan menit disimpan saat event diterima. Status awal setelah koneksi tidak dianggap aktivitas baru; perubahan RGB tanpa perubahan ON/OFF juga tidak membuat jadwal baru. Riwayat lama tetap disimpan.`;
+    byId('ai-observed-note').textContent=`${payload.observed_count || 0} event · ${when(payload.evidence_window_start)} – ${when(payload.evidence_window_end)}. Jam dan menit disimpan saat event diterima. Status awal setelah koneksi tidak dianggap aktivitas baru; perubahan RGB tanpa perubahan ON/OFF juga tidak membuat jadwal baru. Pencatatan event ini dimulai saat fitur aktif; snapshot riwayat lama tetap terpisah dan tidak dihapus.`;
     rows('ai-daily-plan-rows',(payload.daily_plan || []).map(row=>[clock(row),actionLabel(row),String(row.sample_count),labels[row.status]||row.status,row.reason]),'Belum ada pola event dalam 24 jam yang dapat dijadikan rencana besok.',5);
-    byId('ai-tomorrow-note').textContent=`Untuk ${payload.tomorrow_date || 'besok'} · ${payload.daily_plan_method || 'Pola waktu 24 jam'}. Satu hari adalah rencana awal, belum membuktikan kebutuhan tanaman. Semua rencana tersimpan di MySQL dan tidak dijalankan otomatis.${payload.source==='simulation'?' Pola ini berasal dari simulasi historis.':''}`;
+    byId('ai-tomorrow-note').textContent=`Untuk ${payload.tomorrow_date || 'besok'} · ${(payload.daily_plan_method || 'Pola waktu 24 jam').replace(/\.$/,'')}. Satu hari adalah rencana awal, belum membuktikan kebutuhan tanaman. Semua rencana tersimpan di MySQL dan tidak dijalankan otomatis.${payload.source==='simulation'?' Pola ini berasal dari simulasi historis.':''}`;
     rows('ai-forecast-rows',payload.predictions.map(row=>{
       const validation=report.forecasts.find(f=>f.horizon_minutes===row.horizon_minutes);
       return [`${row.horizon_minutes} menit`,when(row.predicted_for),`${fmt(row.predicted_pct)}%`,`${fmt(validation?.mae)} / ${fmt(validation?.baseline_mae)} poin %`,validation?.usable_for_recommendation?'Lolos evaluasi':'Hanya ditampilkan; belum layak'];
