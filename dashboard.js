@@ -475,6 +475,10 @@
     });
   });
 
+  window.addEventListener('smartpot:collect-report', event => {
+    event.detail.sensors = { records: records.map(row => ({...row})), hours: Number(historyHours.value), simulation: isSimulation(), metricLabel: METRICS[selectedMetric].label, error: lastError };
+  });
+
   document.querySelector('#sensor .eyebrow').firstChild.textContent = new Intl.DateTimeFormat('id-ID', { timeZone: WIB, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date()).toLocaleUpperCase('id-ID');
   const localHour = Number(new Intl.DateTimeFormat('en-US', { timeZone: WIB, hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
   document.getElementById('welcome-title').firstChild.textContent = `${localHour < 11 ? 'Selamat pagi' : localHour < 15 ? 'Selamat siang' : localHour < 18 ? 'Selamat sore' : 'Selamat malam'} `;
