@@ -46,6 +46,20 @@
         </div>
       </header>
 
+      <div class="device-workspace" id="koneksi" aria-label="Koneksi MQTT">
+    <section class="connection-panel" aria-labelledby="connection-title">
+      <div class="connection-copy"><p class="eyebrow">KONEKSI LANGSUNG</p><h2 id="connection-title">Hubungkan ke EMQX</h2><p>Profil web panel terisi otomatis dan koneksi akan dipulihkan saat halaman dibuka.</p></div>
+      <form id="connection-form" class="connection-form">
+        <label class="field profile-field"><span>Profil MQTT</span><select id="broker-profile"><option value="tdr2">TDR2</option><option value="web-panel">SmartPot Web Panel</option></select></label>
+        <label class="field field-wide"><span>Alamat WebSocket aman</span><input class="form-control" id="broker-url" type="url" value="wss://af2f1247.ala.asia-southeast1.emqxsl.com:8084/mqtt" autocomplete="url" required></label>
+        <label class="field"><span>Username EMQX</span><input class="form-control" id="broker-username" type="text" autocomplete="username"></label>
+        <label class="field"><span>Password EMQX</span><input class="form-control" id="broker-password" type="password" autocomplete="current-password"></label>
+        <div class="form-actions"><button class="button button-primary btn btn-success" id="connect-button" type="submit">Hubungkan</button><button class="button button-secondary btn btn-outline-secondary" id="disconnect-button" type="button" disabled>Putuskan</button><span id="connection-help" role="status">Gunakan user EMQX dengan izin baca topik SmartPot.</span></div>
+      </form>
+    </section>
+
+      </div>
+
       <section class="page-heading" id="sensor">
         <div>
           <p class="eyebrow">SENIN, 26 OKTOBER 2026 <span class="eyebrow-separator">·</span> PEMANTAUAN HARIAN</p>
@@ -91,17 +105,6 @@
     <section class="page-heading">
       <div><p class="eyebrow">PERANGKAT · SMARTPOT 01</p><h2>Perangkat SmartPot</h2><p class="subtitle">Visualisasi aktuator dan jadwal yang mengikuti pesan langsung dari ESP32 melalui MQTT.</p></div>
       <span class="connection-badge is-offline" id="connection-badge"><span class="status-dot"></span><span id="connection-label">Belum terhubung</span></span>
-    </section>
-
-    <section class="connection-panel" aria-labelledby="connection-title">
-      <div class="connection-copy"><p class="eyebrow">KONEKSI LANGSUNG</p><h2 id="connection-title">Hubungkan ke EMQX</h2><p>Profil web panel terisi otomatis dan koneksi akan dipulihkan saat halaman dibuka.</p></div>
-      <form id="connection-form" class="connection-form">
-        <label class="field profile-field"><span>Profil MQTT</span><select id="broker-profile"><option value="tdr2">TDR2</option><option value="web-panel">SmartPot Web Panel</option></select></label>
-        <label class="field field-wide"><span>Alamat WebSocket aman</span><input class="form-control" id="broker-url" type="url" value="wss://af2f1247.ala.asia-southeast1.emqxsl.com:8084/mqtt" autocomplete="url" required></label>
-        <label class="field"><span>Username EMQX</span><input class="form-control" id="broker-username" type="text" autocomplete="username"></label>
-        <label class="field"><span>Password EMQX</span><input class="form-control" id="broker-password" type="password" autocomplete="current-password"></label>
-        <div class="form-actions"><button class="button button-primary btn btn-success" id="connect-button" type="submit">Hubungkan</button><button class="button button-secondary btn btn-outline-secondary" id="disconnect-button" type="button" disabled>Putuskan</button><span id="connection-help" role="status">Gunakan user EMQX dengan izin baca topik SmartPot.</span></div>
-      </form>
     </section>
 
     <section class="device-grid" aria-label="Visualisasi SmartPot dan status perangkat">
