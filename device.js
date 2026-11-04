@@ -1,5 +1,6 @@
 (() => {
   'use strict';
+  if (!window.SmartPotAuth?.authenticated) return;
 
   const els = Object.fromEntries([
     'connection-badge', 'connection-label', 'connection-form', 'broker-profile', 'broker-url', 'broker-username', 'broker-password',
@@ -421,6 +422,7 @@
       els['disconnect-button'].disabled = true;
     });
   });
+  window.addEventListener('smartpot:logout', disconnect);
   els['disconnect-button'].addEventListener('click', () => {
     sessionStorage.setItem(MANUAL_DISCONNECT_KEY, '1');
     disconnect();
