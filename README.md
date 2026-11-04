@@ -29,3 +29,9 @@ Profil TDR2 memakai broker `ifb44421.ala.asia-southeast1.emqxsl.com`, kredensial
 Collector TDR2 di OVH berjalan terpisah dan memperbarui satu baris per menit menggunakan telemetry terbaru agar riwayat tiga hari tetap ringkas. Pembacaan 0 adalah nilai valid yang dikirim alat, bukan keadaan kosong.
 
 Profil MQTT disimpan setelah broker mengonfirmasi koneksi berhasil, bukan saat dropdown baru diubah. ID profil dipulihkan dari cookie preferensi 30 hari, localStorage, atau sessionStorage. Cookie profil tidak memuat username/password. Refresh menyambung ulang dengan profil yang tersimpan; Putuskan tetap menghentikan sambung otomatis pada sesi tab tersebut.
+
+## Ekspor PDF
+
+Klik **Ekspor PDF** pada Ringkasan untuk membuka pratinjau laporan sesuai profil MQTT, sumber data, dan periode 24/48/72 jam yang dipilih. Laporan memuat ringkasan sensor, grafik parameter terpilih, jadwal harian, riwayat penyiraman/grow light, serta semua baris sensor yang dimuat (maksimal 5.000), tanpa mengikuti paginasi tabel. Data simulasi diberi label. Riwayat aktuator mengikuti data MQTT/cache yang tersedia pada browser.
+
+Klik **Simpan sebagai PDF**, lalu pilih tujuan **Save as PDF / Simpan sebagai PDF** pada dialog cetak browser. Pada iPhone/iPad gunakan opsi cetak dan bagikan/simpan PDF dari pratinjau sistem. Format cetak A4 memakai header tabel berulang dan waktu WIB. Ekspor berjalan di browser tanpa pustaka atau layanan PDF tambahan.
