@@ -13,8 +13,10 @@
   <link rel="stylesheet" href="dashboard.css?v=mobile-bootstrap-3">
   <script src="https://unpkg.com/mqtt@5.16.1/dist/mqtt.min.js" crossorigin="anonymous" defer></script>
   <link rel="stylesheet" href="device.css?v=integrated-1">
-  <script src="dashboard.js?v=tdr2-1" defer></script>
-  <script src="device.js?v=remember-profile-1" defer></script>
+  <link rel="stylesheet" href="export-pdf.css?v=1">
+  <script src="export-pdf.js?v=1" defer></script>
+  <script src="dashboard.js?v=pdf-1" defer></script>
+  <script src="device.js?v=pdf-1" defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -45,6 +47,8 @@
           <button class="logout-button" type="button" data-logout>Keluar</button>
         </div>
       </header>
+
+      <div class="pdf-actions-bar"><button class="btn btn-outline-success pdf-export-button" id="export-pdf" type="button">Ekspor PDF ↗</button></div>
 
       <div class="device-workspace" id="koneksi" aria-label="Koneksi MQTT">
     <section class="connection-panel" aria-labelledby="connection-title">
@@ -228,5 +232,9 @@
       <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
     </main>
   </div>
+  <dialog id="pdf-export" class="pdf-export" aria-labelledby="pdf-title" aria-describedby="pdf-report-info">
+    <header class="pdf-toolbar"><div><strong id="pdf-title">Pratinjau laporan PDF</strong><p id="pdf-report-info"></p></div><div class="pdf-toolbar-actions"><button id="pdf-close" class="btn btn-outline-secondary" type="button">Tutup</button><button id="pdf-save" class="btn btn-success" type="button" autofocus>Simpan sebagai PDF</button></div></header>
+    <article id="pdf-report" class="pdf-report"></article>
+  </dialog>
 </body>
 </html>
