@@ -36,6 +36,7 @@
   let playStartIndex = 0;
   let wateringEvents = [];
   const WATERING_HISTORY_KEY = 'smartpot-actuator-history-v1';
+  const wateringStorageKey = () => `${WATERING_HISTORY_KEY}:${document.getElementById('broker-profile').value || 'web-panel'}`;
   const WATERING_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
   const HOUR_MS = 60 * 60 * 1000;
   const numberFmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -74,6 +75,7 @@
     const url = new URL(API_URL);
     url.searchParams.set('source', historySource.value);
     url.searchParams.set('hours', historyHours.value);
+    url.searchParams.set('profile', document.getElementById('broker-profile').value || 'web-panel');
     document.getElementById('history-json').href = url.href;
     els['refresh-button'].classList.add('is-loading');
     els['refresh-button'].disabled = true;
@@ -183,8 +185,8 @@
 
   function persistWateringEvents() {
     try {
-      const saved = JSON.parse(localStorage.getItem(WATERING_HISTORY_KEY) || '{}');
-      localStorage.setItem(WATERING_HISTORY_KEY, JSON.stringify({ ...saved, watering: wateringEvents }));
+      const saved = JSON.parse(localStorage.getItem(wateringStorageKey()) || '{}');
+      localStorage.setItem(wateringStorageKey(), JSON.stringify({ ...saved, watering: wateringEvents }));
     } catch (_) { /* Keep the live chart usable when browser storage is unavailable. */ }
   }
 
@@ -255,7 +257,7 @@
 
   function restoreWateringHistory() {
     try {
-      const saved = JSON.parse(localStorage.getItem(WATERING_HISTORY_KEY) || '{}');
+      const saved = JSON.parse(localStorage.getItem(wateringStorageKey()) || '{}');
       wateringEvents = normalizeWateringEvents(Array.isArray(saved.watering) ? saved.watering : []);
     } catch (_) { wateringEvents = []; }
     renderWateringChart();
@@ -272,9 +274,41 @@
     setWateringSource('is-live', 'Riwayat MQTT langsung');
   }
 
+  function acceptLiveTelemetry(detail) {
+    if (isSimulation() || detail.topic !== 'smartpot/telemetry') return;
+    let payload;
+    try { payload = JSON.parse(detail.message); } catch (_) { return; }
+    if (!payload || typeof payload !== 'object') return;
+    const numeric = value => value == null || value === '' || !Number.isFinite(Number(value)) ? null : Number(value);
+    const now = Date.now();
+    const row = { ts: now, device_id: detail.profile === 'tdr2' ? 'smartpot-tdr2' : 'smartpot-01',
+      temperature: numeric(payload.temperature), humidity: numeric(payload.humidity),
+      soil_moisture: numeric(payload.soil_moisture ?? payload.moisture ?? payload.soil),
+      water_level: numeric(payload.water_level ?? payload.waterLevel ?? payload.water), battery: numeric(payload.battery ?? payload.batt) };
+    if (!['temperature','humidity','soil_moisture','water_level','battery'].some(key => row[key] !== null)) return;
+    const latest = !records.length || cursorIndex >= records.length - 1;
+    const minute = Math.floor(now/60000);
+    if (records.length && Math.floor(records[records.length-1].ts/60000) === minute) records[records.length-1] = row;
+    else records.push(row);
+    records = records.filter(item => item.ts >= now - Number(historyHours.value)*3600000).slice(-5000);
+    if (!playFrame && latest) cursorIndex = records.length-1;
+    else cursorIndex = Math.min(Math.max(0,cursorIndex),records.length-1);
+    lastError = ''; updateConnectionState(); render(); renderSensorHistory();
+    document.getElementById('database-proof').textContent = `MQTT langsung · ${detail.profile === 'tdr2' ? 'TDR2' : 'Web Panel'} · sensor diperbarui ${timeFmt.format(new Date(now))} WIB · riwayat disimpan ke MySQL OVH`;
+  }
+
   function connectWateringHistory() {
     window.addEventListener('smartpot:mqtt-message', ({ detail }) => {
+      acceptLiveTelemetry(detail);
       if (detail.topic === 'smartpot/history/watering') acceptWateringSnapshot(detail.message);
+    });
+    window.addEventListener('smartpot:mqtt-profile', ({ detail }) => {
+      wateringEvents = []; restoreWateringHistory();
+      if (!detail.initial || detail.profile === 'tdr2') historySource.value = 'device';
+      const option = historySource.querySelector('option[value="device"]');
+      option.textContent = detail.profile === 'tdr2' ? 'Data alat · TDR2' : 'Data alat · SmartPot 01';
+      stopPlayback(); records = []; cursorIndex = 0; historyPage = 0; lastError = '';
+      renderEmpty(); renderSensorHistory(); loadData();
     });
     window.addEventListener('smartpot:mqtt-state', ({ detail }) => {
       setWateringSource(detail.mode === 'live' ? 'is-live' : detail.mode === 'error' ? 'is-error' : 'is-preview', detail.label);
@@ -441,7 +475,7 @@
     });
   });
 
-  document.querySelector('.eyebrow').firstChild.textContent = new Intl.DateTimeFormat('id-ID', { timeZone: WIB, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date()).toLocaleUpperCase('id-ID');
+  document.querySelector('#sensor .eyebrow').firstChild.textContent = new Intl.DateTimeFormat('id-ID', { timeZone: WIB, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date()).toLocaleUpperCase('id-ID');
   const localHour = Number(new Intl.DateTimeFormat('en-US', { timeZone: WIB, hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
   document.getElementById('welcome-title').firstChild.textContent = `${localHour < 11 ? 'Selamat pagi' : localHour < 15 ? 'Selamat siang' : localHour < 18 ? 'Selamat sore' : 'Selamat malam'} `;
   restoreWateringHistory();
