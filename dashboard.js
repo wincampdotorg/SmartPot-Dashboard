@@ -10,7 +10,7 @@
     water_level: { label: 'Level air', unit: '%', color: '#5296c6', min: 0, max: 100, digits: 1 }
   };
   const els = Object.fromEntries([
-    'source-badge', 'source-label', 'refresh-button', 'health-state', 'health-title', 'health-description',
+    'source-badge', 'source-label', 'refresh-button',
     'updated-label', 'metric-soil', 'metric-temp', 'metric-humidity', 'metric-water', 'metric-battery',
     'soil-note', 'water-note', 'spark-soil', 'spark-temp', 'spark-humidity', 'spark-water', 'spark-battery',
     'chart-title', 'chart-current', 'chart-period', 'trend-chart', 'axis-start', 'axis-quarter1', 'axis-mid', 'axis-quarter3', 'axis-end', 'play-button',
@@ -123,9 +123,6 @@
     ['metric-soil','metric-temp','metric-humidity','metric-water','metric-battery','chart-current'].forEach(key => { els[key].textContent = '—'; });
     ['spark-soil','spark-temp','spark-humidity','spark-water','spark-battery','trend-chart'].forEach(key => els[key].replaceChildren());
     els['updated-label'].textContent = lastError ? 'Data tidak tersedia' : 'Belum ada data dalam periode ini';
-    els['health-state'].textContent = 'Menunggu telemetry';
-    els['health-title'].textContent = 'Belum ada pembacaan sensor.';
-    els['health-description'].textContent = lastError || 'Hubungkan alat ke profil SmartPotIoTBinusGroup10 dan kirim ke topik smartpot/telemetry.';
     els['device-state'].textContent = 'Menunggu data alat';
     els['device-description'].textContent = 'Belum ada telemetry pada periode yang dipilih.';
     els['chart-period'].textContent = `${Number(historyHours.value)/24} hari terakhir · belum ada data`;
@@ -345,12 +342,7 @@
     els['axis-quarter3'].textContent = wibTime(records[Math.floor(((records.length - 1) * 3) / 4)].ts);
   }
 
-  function renderHealth(row) {
-    const healthy = row.soil_moisture >= 35 && row.soil_moisture <= 70 && row.temperature >= 18 && row.temperature <= 34 && row.water_level >= 20 && row.battery >= 20;
-    document.querySelector('.health-status').classList.toggle('is-warn', !healthy);
-    els['health-state'].textContent = healthy ? 'Kondisi dalam rentang' : 'Perlu diperhatikan';
-    els['health-title'].textContent = healthy ? 'Tanaman Anda tampak nyaman.' : 'Ada parameter yang perlu dicek.';
-    els['health-description'].textContent = isSimulation() ? 'Nilai simulasi tersimpan di database Smartport.' : 'Pembacaan perangkat dari MQTT tersimpan di database Smartport.';
+  function renderMetricNotes(row) {
     els['soil-note'].textContent = row.soil_moisture < 35 ? 'Mulai mengering' : row.soil_moisture > 70 ? 'Cukup basah' : 'Dalam rentang';
     els['water-note'].textContent = row.water_level < 25 ? 'Perlu diisi' : 'Reservoir';
   }
@@ -385,7 +377,7 @@
     els['timeline'].value = String(cursorIndex);
     els['timeline-time'].textContent = wibTime(row.ts);
     els['timeline'].setAttribute('aria-valuetext', `${dateFmt.format(new Date(row.ts))} ${wibTime(row.ts)} WIB`);
-    renderHealth(row);
+    renderMetricNotes(row);
     renderInsights();
     drawSparkline(els['spark-soil'], records.slice(0, cursorIndex + 1), 'soil_moisture', '#4d966d');
     drawSparkline(els['spark-temp'], records.slice(0, cursorIndex + 1), 'temperature', '#d58845');
