@@ -34,14 +34,8 @@
   let playStartedAt = 0;
   let playStartIndex = 0;
   let wateringEvents = [];
-  let wateringClient = null;
   const WATERING_HISTORY_KEY = 'smartpot-actuator-history-v1';
   const WATERING_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
-  const WATERING_MQTT = {
-    url: 'wss://af2f1247.ala.asia-southeast1.emqxsl.com:8084/mqtt',
-    username: 'binusiotgroup10',
-    password: 'binusiotgroup10'
-  };
   const HOUR_MS = 60 * 60 * 1000;
   const numberFmt = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const dateFmt = new Intl.DateTimeFormat('id-ID', { timeZone: WIB, day: 'numeric', month: 'short', year: 'numeric' });
@@ -281,33 +275,12 @@
   }
 
   function connectWateringHistory() {
-    if (!window.mqtt) {
-      setWateringSource('is-error', 'Library MQTT tidak tersedia');
-      return;
-    }
-    const clientId = `SmartPotHome_${Math.random().toString(16).slice(2, 12)}`;
-    wateringClient = window.mqtt.connect(WATERING_MQTT.url, {
-      clientId,
-      username: WATERING_MQTT.username,
-      password: WATERING_MQTT.password,
-      protocolVersion: 4,
-      clean: true,
-      connectTimeout: 10000,
-      reconnectPeriod: 3000,
-      keepalive: 30
+    window.addEventListener('smartpot:mqtt-message', ({ detail }) => {
+      if (detail.topic === 'smartpot/history/watering') acceptWateringSnapshot(detail.message);
     });
-    wateringClient.on('connect', () => {
-      setWateringSource('is-live', 'Terhubung · memuat riwayat');
-      wateringClient.subscribe('smartpot/history/watering', { qos: 1 }, (error) => {
-        if (error) setWateringSource('is-error', 'Gagal berlangganan riwayat');
-      });
+    window.addEventListener('smartpot:mqtt-state', ({ detail }) => {
+      setWateringSource(detail.mode === 'live' ? 'is-live' : detail.mode === 'error' ? 'is-error' : 'is-preview', detail.label);
     });
-    wateringClient.on('message', (topic, payload) => {
-      if (topic === 'smartpot/history/watering') acceptWateringSnapshot(payload.toString());
-    });
-    wateringClient.on('reconnect', () => setWateringSource('is-preview', 'Menyambungkan ulang · cache lokal'));
-    wateringClient.on('offline', () => setWateringSource('is-preview', wateringEvents.length ? 'Offline · menampilkan cache' : 'Menunggu koneksi MQTT'));
-    wateringClient.on('error', () => setWateringSource('is-error', wateringEvents.length ? 'MQTT gagal · cache ditampilkan' : 'Koneksi MQTT gagal'));
   }
 
   function makeLinePath(values, xFor, yFor) {
