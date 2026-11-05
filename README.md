@@ -47,3 +47,9 @@ Tabel dan grafik memiliki area gulir sendiri pada ponsel, tanpa mengecilkan teks
 Panel AI juga menampilkan **Waktu event · 24 jam terakhir** (10 data per halaman) dan **Rekomendasi jadwal besok**. Event ditulis langsung oleh collector ke MySQL saat pesan/transisi terjadi. Grow light OFF terpisah; perubahan RGB tidak membuat jadwal. Kombinasi Pump + Grow light ditandai berdasarkan kedekatan ≤5 detik, dengan bukti penggabungan ditampilkan. Riwayat lama tetap tersimpan. Waktu event lama yang tidak dapat dikaitkan ke broker secara pasti tidak diarang atau di-backfill.
 
 Rencana besok memakai pengelompokan pola waktu 24 jam, terpisah dari regresi kelembapan 30/60/120 menit. Median jam/menit dipersistenkan di Smartport.ai_daily_plans; satu hari tetap berstatus rencana awal untuk ditinjau. Ponsel Android dapat membaca data yang sama dari menu Schedule. Perubahan status MQTT memperbarui pembacaan panel setelah jeda singkat untuk commit database; rencana besok diperbarui worker setiap lima menit. Ekspor PDF menyertakan rencana besok.
+
+## Pratinjau visual penyiraman
+
+Di bagian Perangkat tersedia **Pratinjau aliran · 5 detik**. Tombol ini hanya menampilkan selang/aliran air dan label pratinjau, tanpa mengirim MQTT, menulis riwayat, atau mengubah persentase air. Status pompa asli tetap terpisah. Saat pesan ON asli masuk, pratinjau dibatalkan dan visual mengikuti MQTT; OFF mengakhiri visual asli. Aliran mengarah ke bibir pot dan lebih kontras. Pengaturan reduced-motion memakai aliran statis yang tetap terlihat, tanpa durasi animasi global 0,01 ms.
+
+`pump-signal.js` menerima ON/OFF mentah, JSON string, boolean, angka 1/0, serta objek state/status_pump/pump/action. Payload yang bukan status tidak mengubah visual. Jalankan `node --test tests/pump-signal.test.cjs` untuk 16 kasus payload. Node test runner melaporkannya sebagai satu file uji.
