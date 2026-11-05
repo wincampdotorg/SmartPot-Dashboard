@@ -235,6 +235,43 @@
     } catch (_) { /* Storage may be unavailable in a restricted browser context. */ }
   }
 
+  let catalogReady = false;
+  let catalogRequest = null;
+  let catalogTimer;
+  function requestCatalogSoon() {
+    clearTimeout(catalogTimer);
+    catalogTimer = setTimeout(loadCatalog, 500);
+  }
+  async function loadCatalog() {
+    if (catalogRequest) return;
+    const profile = els['broker-profile'].value;
+    const controller = new AbortController();
+    catalogRequest = controller;
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch(`https://wincamp.web.id/smartpot/api/catalog?profile=${encodeURIComponent(profile)}`, {cache:'no-store',signal:controller.signal});
+      if (!response.ok) throw new Error('API katalog tidak tersedia');
+      const data = await response.json();
+      if (profile !== els['broker-profile'].value || data.database !== 'Smartport' || data.profile !== profile) return;
+      if (!Array.isArray(data.schedules) || !Array.isArray(data.watering) || !Array.isArray(data.grow_light)) throw new Error('Katalog tidak valid');
+      catalogReady = true;
+      state.schedules = data.schedules;
+      state.wateringHistory = pruneHistory(data.watering);
+      state.growLightHistory = pruneHistory(data.grow_light);
+      els['schedule-source'].textContent = data.pending_device_updates ? 'Smartport · menunggu pengiriman MQTT' : 'Tersinkron · Smartport';
+      els['schedule-source'].classList.add('is-live');
+      renderSchedules(); renderHistory(); persistHistory();
+      window.dispatchEvent(new CustomEvent('smartpot:history-db', {detail:{profile,watering:state.wateringHistory}}));
+    } catch (_) {
+      if(profile!==els['broker-profile'].value)return;
+      els['schedule-source'].textContent = catalogReady ? 'Smartport · koneksi terputus, mencoba kembali' : 'Smartport belum tersedia · data cache/MQTT';
+      els['schedule-source'].classList.remove('is-live');
+    } finally {
+      clearTimeout(timeout);
+      if(catalogRequest===controller)catalogRequest=null;
+    }
+  }
+
   function renderHistoryTable(tbody, count, pagination, previousButton, pageLabel, nextButton, events, columns, emptyText, page, setPage) {
     tbody.replaceChildren();
     count.textContent = `${events.length} ${events.length === 1 ? 'catatan' : 'catatan'}`;
@@ -258,8 +295,8 @@
     events.slice((currentPage - 1) * 10, currentPage * 10).forEach((event) => {
       const row = document.createElement('tr');
       const cells = columns === 4
-        ? [dateTimeFmt.format(new Date(event.timestamp)) + ' WIB', event.source === 'android_manual' ? 'Tombol Pump' : 'Jadwal otomatis', `${Number(event.waterLevel) || 0}%`, Number(event.waterLevel) <= 20 ? 'Air Rendah' : 'Sukses Menyiram']
-        : [dateTimeFmt.format(new Date(event.timestamp)) + ' WIB', truthy(event.state) ? 'Menyala' : 'Mati', `R ${Number(event.red) || 0} · G ${Number(event.green) || 0} · B ${Number(event.blue) || 0}`];
+        ? [dateTimeFmt.format(new Date(event.timestamp)) + ' WIB', event.source === 'android_manual' ? 'Tombol Pump' : event.source === 'mqtt_device' ? 'Perangkat / MQTT' : 'Jadwal otomatis', event.waterLevel == null ? '—' : `${Number(event.waterLevel)}%`, event.waterLevel == null ? 'Level air tidak tersedia' : Number(event.waterLevel) <= 20 ? 'Air Rendah' : 'Sukses Menyiram']
+        : [dateTimeFmt.format(new Date(event.timestamp)) + ' WIB', truthy(event.state) ? 'Menyala' : 'Mati', event.red == null ? 'Tidak dikirim alat' : `R ${Number(event.red) || 0} · G ${Number(event.green) || 0} · B ${Number(event.blue) || 0}`];
       cells.forEach((text) => {
         const cell = document.createElement('td');
         cell.textContent = text;
@@ -282,6 +319,7 @@
   els['grow-light-history-next'].addEventListener('click', () => { state.growLightPage += 1; renderHistory(); });
 
   function mergeHistory(type, events) {
+    if (catalogReady) { requestCatalogSoon(); return; }
     if (!Array.isArray(events)) return;
     if (type === 'watering') state.wateringHistory = pruneHistory([...state.wateringHistory, ...events]);
     else state.growLightHistory = pruneHistory([...state.growLightHistory, ...events]);
@@ -303,19 +341,19 @@
     if (!state.schedules.length) {
       const row = document.createElement('tr');
       const cell = document.createElement('td');
-      cell.colSpan = 4;
+      cell.colSpan = 5;
       cell.className = 'empty-row';
-      cell.textContent = 'Belum ada jadwal yang diterima dari perangkat.';
+      cell.textContent = 'Belum ada jadwal di Smartport.';
       row.append(cell);
       els['schedule-rows'].append(row);
       return;
     }
-    [...state.schedules].sort((a, b) => String(a.time || '').localeCompare(String(b.time || ''))).forEach((item) => {
+    state.schedules.forEach((item) => {
       const row = document.createElement('tr');
       const pump = Number(item.status_pump ?? item.pumpOn ?? 1) === 1 || item.pumpOn === true;
       const light = truthy(item.growLight ?? item.grow_light);
       const time = item.time || `${String(item.hour ?? 0).padStart(2, '0')}:${String(item.minute ?? 0).padStart(2, '0')}`;
-      [time, pump ? (light ? 'Penyiraman + grow light' : 'Penyiraman saja') : 'Grow light saja', pump ? 'Pompa aktif' : 'Pompa mati', light ? 'Menyala' : 'Mati'].forEach((text) => {
+      [`${time} · ${item.planned_date || 'Setiap hari'}`, pump ? (item.action_type === 'pump_grow_light' || light ? 'Penyiraman + grow light' : 'Penyiraman saja') : 'Grow light saja', item.origin === 'ai' ? 'Usulan AI · belum dijalankan' : 'Manual · aktif', pump ? '5 detik' : '—', light ? 'Menyala' : 'Mati'].forEach((text) => {
         const cell = document.createElement('td');
         cell.textContent = text;
         row.append(cell);
@@ -325,6 +363,8 @@
   }
 
   function acceptScheduleSnapshot(payload) {
+    requestCatalogSoon();
+    if(catalogReady)return;
     if (!Array.isArray(payload.schedules)) return;
     state.schedules = payload.schedules.filter((item) => item && typeof item === 'object');
     els['schedule-source'].textContent = 'Snapshot retained perangkat';
@@ -333,6 +373,8 @@
   }
 
   function acceptScheduleEvent(payload) {
+    requestCatalogSoon();
+    if(catalogReady)return;
     if (!payload || typeof payload !== 'object') return;
     if (String(payload.action || '').toUpperCase() === 'DELETE_SCHEDULE') {
       state.schedules = state.schedules.filter((item) => item.id !== payload.id);
@@ -352,6 +394,7 @@
     window.dispatchEvent(new CustomEvent('smartpot:mqtt-message', { detail: { topic, message, profile: els['broker-profile'].value } }));
     const payload = parseJson(message);
     markMessage(topic);
+    if(topic === 'smartpot/db/schedules/ack' || topic === 'smartpot/pump/status' || topic === 'smartpot/control/light')requestCatalogSoon();
 
     if (topic === 'smartpot/history/watering' && payload && payload.type === 'snapshot') {
       mergeHistory('watering', payload.events);
@@ -512,9 +555,13 @@
   }
   els['broker-profile'].addEventListener('change', (event) => {
     disconnect();
+    catalogReady=false;
+    if(catalogRequest)catalogRequest.abort();
+    catalogRequest=null;
     applyMqttProfile(event.target.value);
     resetProfileView();
     window.dispatchEvent(new CustomEvent('smartpot:mqtt-profile', { detail: { profile: event.target.value } }));
+    loadCatalog();
     els['connection-form'].requestSubmit();
   });
   const selectedProfile = restoreConnectedProfile();
@@ -527,6 +574,8 @@
   restoreDeviceState();
   renderSchedules();
   restoreHistory();
+  loadCatalog();
+  window.setInterval(loadCatalog,15000);
   if (sessionStorage.getItem(MANUAL_DISCONNECT_KEY) !== '1') {
     window.addEventListener('load', () => els['connection-form'].requestSubmit(), { once: true });
   }
