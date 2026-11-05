@@ -34,7 +34,7 @@
       password: 'binusiotgroup10'
     }
   };
-  const state = { client: null, lightOn: null, rgb: null, pumpOn: false, water: null, schedules: [], pumpTimer: 0, previewOn: false, previewTimer: 0, wateringHistory: [], growLightHistory: [], wateringPage: 1, growLightPage: 1 };
+  const state = { client: null, lightOn: null, rgb: null, pumpOn: false, water: null, schedules: [], flowOn: false, previewOn: false, previewTimer: 0, wateringHistory: [], growLightHistory: [], wateringPage: 1, growLightPage: 1 };
   const timeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
   const dateTimeFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
   const truthy = (value) => value === true || value === 1 || /^(on|true|1|yes)$/i.test(String(value));
@@ -145,12 +145,17 @@
       : lowWater ? 'Level air rendah. Isi ulang reservoir sebelum menyiram.' : '';
   }
 
+  const pumpVisual = window.SmartPotPumpSignal.createVisualPulse(active => {
+    state.flowOn = active;
+    renderPumpVisual();
+  });
+
   function renderPumpVisual() {
-    const active = state.pumpOn || state.previewOn;
+    const active = state.flowOn || state.previewOn;
     els['scene-wrap'].classList.toggle('pump-on', active);
     const badge = document.getElementById('pump-visual-status');
     badge.hidden = !active;
-    badge.textContent = state.pumpOn ? 'Perintah pompa ON · aliran aktif' : 'Pratinjau aliran · tanpa perintah ke alat';
+    badge.textContent = state.flowOn ? `Visualisasi aliran · 5 detik · status pompa ${state.pumpOn ? 'ON' : 'OFF'}` : 'Pratinjau aliran · tanpa perintah ke alat';
     const button = document.getElementById('preview-water-flow');
     button.disabled = active;
     button.textContent = state.previewOn ? 'Pratinjau sedang berjalan…' : 'Pratinjau aliran · 5 detik';
@@ -158,12 +163,11 @@
 
   function setPump(on, message = '') {
     state.pumpOn = Boolean(on);
-    window.clearTimeout(state.pumpTimer);
     if (state.pumpOn) {
       state.previewOn = false;
       window.clearTimeout(state.previewTimer);
-      state.pumpTimer = window.setTimeout(() => setPump(false, 'Animasi selesai · menunggu status pompa berikutnya.'), 5000);
     }
+    pumpVisual.receive(state.pumpOn);
     renderPumpVisual();
     els['pump-state'].textContent = state.pumpOn ? 'Perintah penyiraman aktif' : 'Pompa siaga';
     els['pump-heading'].textContent = state.pumpOn ? 'Menyiram' : 'Siaga';
@@ -173,7 +177,7 @@
   }
 
   document.getElementById('preview-water-flow').addEventListener('click', () => {
-    if (state.pumpOn) return;
+    if (state.pumpOn || state.flowOn) return;
     window.clearTimeout(state.previewTimer);
     state.previewOn = true;
     renderPumpVisual();
@@ -482,6 +486,7 @@
     disconnect();
   });
   function resetProfileView() {
+    pumpVisual.reset();
     state.previewOn = false;
     window.clearTimeout(state.previewTimer);
     state.lightOn = null; state.rgb = null; state.water = null;
