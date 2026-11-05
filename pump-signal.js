@@ -15,6 +15,24 @@
     if (/^(off|false|0|no)$/i.test(value.trim())) return false;
     return null;
   }
-  if (typeof module === 'object' && module.exports) module.exports = {parse};
-  else root.SmartPotPumpSignal = {parse};
+  function createVisualPulse(onChange, timers = globalThis) {
+    let active = false, lastOn = false, timer = null;
+    return {
+      receive(on) {
+        const rising = on && !lastOn;
+        lastOn = Boolean(on);
+        if (!rising || active) return;
+        active = true;
+        onChange(true);
+        timer = timers.setTimeout(() => { active = false; timer = null; onChange(false); }, 5000);
+      },
+      reset() {
+        if (timer !== null) timers.clearTimeout(timer);
+        timer = null; active = false; lastOn = false;
+        onChange(false);
+      }
+    };
+  }
+  if (typeof module === 'object' && module.exports) module.exports = {parse, createVisualPulse};
+  else root.SmartPotPumpSignal = {parse, createVisualPulse};
 })(globalThis);
