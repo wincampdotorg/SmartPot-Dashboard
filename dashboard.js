@@ -176,7 +176,7 @@
     events.forEach((event) => {
       const timestamp = typeof event?.timestamp === 'number' ? event.timestamp : Date.parse(event?.timestamp);
       if (!event || !Number.isFinite(timestamp) || timestamp < cutoff || timestamp > Date.now() + 5 * 60 * 1000) return;
-      const normalized = { ...event, timestamp, waterLevel: Number(event.waterLevel ?? event.water_level) };
+      const normalized = { ...event, timestamp, waterLevel: (event.waterLevel ?? event.water_level) == null ? null : Number(event.waterLevel ?? event.water_level) };
       const key = String(event.id ?? `${timestamp}:${event.source || ''}:${normalized.waterLevel}:${event.outcome || ''}`);
       byId.set(key, normalized);
     });
@@ -195,7 +195,7 @@
     svg.replaceChildren();
     const currentHour = Math.floor(Date.now() / HOUR_MS);
     const firstHour = currentHour - 23;
-    const buckets = Array.from({ length: 24 }, () => ({ success: 0, low: 0 }));
+    const buckets = Array.from({ length: 24 }, () => ({ success: 0, low: 0, unknown: 0 }));
     const events = wateringEvents.filter((event) => {
       const hour = Math.floor(event.timestamp / HOUR_MS);
       return hour >= firstHour && hour <= currentHour;
@@ -204,15 +204,17 @@
     events.forEach((event) => {
       const hour = Math.floor(event.timestamp / HOUR_MS);
       const bucket = buckets[hour - firstHour];
-      if (Number(event.waterLevel) <= 20) bucket.low += 1;
+      if (event.waterLevel == null) bucket.unknown += 1;
+      else if (Number(event.waterLevel) <= 20) bucket.low += 1;
       else bucket.success += 1;
     });
 
     const successCount = events.filter((event) => Number(event.waterLevel) > 20).length;
-    const lowCount = events.length - successCount;
+    const unknownCount=events.filter(event=>event.waterLevel==null).length;
+    const lowCount = events.length - successCount - unknownCount;
     els['watering-total'].textContent = `${events.length} ${events.length === 1 ? 'tindakan' : 'tindakan'}`;
     els['watering-chart-summary'].textContent = wateringEvents.length
-      ? `${successCount} sukses menyiram · ${lowCount} tertahan karena air ≤20% · ${wateringEvents.length} catatan dalam 3 hari.`
+      ? `${successCount} sukses menyiram · ${lowCount} air rendah (≤20%) · ${unknownCount} tanpa level air · ${wateringEvents.length} catatan dalam 3 hari.`
       : 'Belum ada catatan penyiraman dari perangkat dalam 3 hari terakhir.';
 
     if (!events.length) {
@@ -222,7 +224,7 @@
     }
 
     const plot = { left: 52, right: 986, top: 18, bottom: 185 };
-    const maxBucket = Math.max(...buckets.map((bucket) => bucket.success + bucket.low), 1);
+    const maxBucket = Math.max(...buckets.map((bucket) => bucket.success + bucket.low + bucket.unknown), 1);
     const scaleMax = Math.max(2, Math.ceil(maxBucket / 2) * 2);
     const plotHeight = plot.bottom - plot.top;
     const slotWidth = (plot.right - plot.left) / 24;
@@ -239,13 +241,15 @@
       const x = plot.left + (index * slotWidth) + ((slotWidth - barWidth) / 2);
       const successHeight = (bucket.success / scaleMax) * plotHeight;
       const lowHeight = (bucket.low / scaleMax) * plotHeight;
-      const total = bucket.success + bucket.low;
+      const unknownHeight=(bucket.unknown/scaleMax)*plotHeight;
+      if(unknownHeight>0)svg.append(svgEl('rect',{x,y:plot.bottom-successHeight-lowHeight-unknownHeight,width:barWidth,height:unknownHeight,rx:3,fill:'#92999b'}));
+      const total = bucket.success + bucket.low + bucket.unknown;
       if (successHeight > 0) svg.append(svgEl('rect', { x, y: plot.bottom - successHeight, width: barWidth, height: successHeight, rx: 3, fill: '#4d966d' }));
       if (lowHeight > 0) svg.append(svgEl('rect', { x, y: plot.bottom - successHeight - lowHeight, width: barWidth, height: lowHeight, rx: 3, fill: '#d45e5e' }));
       if (total > 0) {
-        const bar = svgEl('g', { 'aria-label': `${wibTime((firstHour + index) * HOUR_MS)} WIB · ${bucket.success} sukses · ${bucket.low} air rendah` });
+        const bar = svgEl('g', { 'aria-label': `${wibTime((firstHour + index) * HOUR_MS)} WIB · ${bucket.success} sukses · ${bucket.low} air rendah · ${bucket.unknown} tanpa level air` });
         const title = svgEl('title');
-        title.textContent = `${wibTime((firstHour + index) * HOUR_MS)} WIB · ${bucket.success} sukses · ${bucket.low} air rendah`;
+        title.textContent = `${wibTime((firstHour + index) * HOUR_MS)} WIB · ${bucket.success} sukses · ${bucket.low} air rendah · ${bucket.unknown} tanpa level air`;
         bar.append(title);
         svg.append(bar);
       }
@@ -298,11 +302,19 @@
   }
 
   function connectWateringHistory() {
+    let databaseHistory = false;
+    window.addEventListener('smartpot:history-db', ({detail}) => {
+      databaseHistory=true;
+      wateringEvents=normalizeWateringEvents(detail.watering);
+      persistWateringEvents(); renderWateringChart();
+      setWateringSource('is-live','Riwayat database Smartport');
+    });
     window.addEventListener('smartpot:mqtt-message', ({ detail }) => {
       acceptLiveTelemetry(detail);
-      if (detail.topic === 'smartpot/history/watering') acceptWateringSnapshot(detail.message);
+      if (!databaseHistory && detail.topic === 'smartpot/history/watering') acceptWateringSnapshot(detail.message);
     });
     window.addEventListener('smartpot:mqtt-profile', ({ detail }) => {
+      databaseHistory=false;
       wateringEvents = []; restoreWateringHistory();
       if (!detail.initial || detail.profile === 'tdr2') historySource.value = 'device';
       const option = historySource.querySelector('option[value="device"]');
@@ -311,6 +323,7 @@
       renderEmpty(); renderSensorHistory(); loadData();
     });
     window.addEventListener('smartpot:mqtt-state', ({ detail }) => {
+      if(databaseHistory)return;
       setWateringSource(detail.mode === 'live' ? 'is-live' : detail.mode === 'error' ? 'is-error' : 'is-preview', detail.label);
     });
   }
