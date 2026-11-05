@@ -12,11 +12,12 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
   <link rel="stylesheet" href="dashboard.css?v=mobile-bootstrap-3">
   <script src="https://unpkg.com/mqtt@5.16.1/dist/mqtt.min.js" crossorigin="anonymous" defer></script>
-  <link rel="stylesheet" href="device.css?v=integrated-1">
+  <link rel="stylesheet" href="device.css?v=pump-visual-2">
   <link rel="stylesheet" href="export-pdf.css?v=1">
   <script src="export-pdf.js?v=ai-1" defer></script>
   <script src="dashboard.js?v=pdf-1" defer></script>
-  <script src="device.js?v=pdf-1" defer></script>
+  <script src="pump-signal.js?v=1" defer></script>
+  <script src="device.js?v=pump-visual-2" defer></script>
   <link rel="stylesheet" href="ai-dashboard.css?v=1">
   <script src="ai-dashboard.js?v=2" defer></script>
 </head>
@@ -107,6 +108,7 @@
       <article class="scene-panel">
         <div class="panel-heading"><div><p class="eyebrow">VISUALISASI PERANGKAT</p><h2>Grow light & penyiraman</h2></div><span class="device-chip"><span class="device-dot"></span>ESP32 · SmartPot 01</span></div>
         <div class="scene-wrap" id="scene-wrap">
+          <div id="pump-visual-status" class="pump-visual-status" role="status" hidden></div>
           <svg class="device-scene" viewBox="0 0 800 560" role="img" aria-labelledby="scene-title scene-description">
             <title id="scene-title">Pot tanaman SmartPot dengan grow light dan reservoir air</title>
             <desc id="scene-description">Grow light berada di atas tanaman. Reservoir berada di bawah pot dan air mengalir saat pompa aktif.</desc>
@@ -151,9 +153,9 @@
               <path d="M270 474Q400 489 530 474" fill="none" stroke="#e8fbff" stroke-opacity=".68" stroke-width="2"/>
               <path d="M243 421Q400 438 557 421" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
             </g>
-            <g class="pump-tube" fill="none" stroke="#759ba9" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M529 452V387Q529 371 513 371H477"/><path class="water-flow" d="M529 452V387Q529 371 513 371H477"/></g>
-            <circle class="pump-nozzle" cx="473" cy="371" r="7" fill="#759ba9"/>
-            <g class="flow-drops" fill="#55b8e0"><circle class="drop drop-one" cx="473" cy="382" r="5"/><circle class="drop drop-two" cx="473" cy="395" r="4"/><circle class="drop drop-three" cx="473" cy="409" r="3"/></g>
+            <g class="pump-tube" fill="none" stroke="#759ba9" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M529 452V300Q529 284 513 284H455"/><path class="water-flow" d="M529 452V300Q529 284 513 284H455"/></g>
+            <circle class="pump-nozzle" cx="451" cy="284" r="7" fill="#759ba9"/>
+            <path class="water-jet" d="M451 291V314" fill="none" stroke="#1689d1" stroke-width="6" stroke-linecap="round"/><g class="flow-drops" fill="#1689d1"><circle class="drop drop-one" cx="451" cy="296" r="7"/><circle class="drop drop-two" cx="451" cy="303" r="4"/><circle class="drop drop-three" cx="451" cy="310" r="3"/></g>
             <g class="esp32-module" aria-label="Modul ESP32 yang terhubung ke SmartPot">
               <path d="M555 274H586V296H537V356H555" fill="none" stroke="#688b78" stroke-width="3" stroke-dasharray="5 5"/>
               <rect x="584" y="278" width="128" height="82" rx="10" fill="#376e5a" stroke="#285444" stroke-width="3"/>
@@ -169,6 +171,7 @@
           </svg>
         <div class="scene-legend"><span><i class="legend-light"></i><span id="light-state">Menunggu status grow light</span></span><span><i class="legend-pump"></i><span id="pump-state">Menunggu status pompa</span></span></div>
         </div>
+        <div class="flow-preview-actions"><button id="preview-water-flow" class="btn btn-outline-primary" type="button">Pratinjau aliran · 5 detik</button><small>Hanya visualisasi. Tidak mengirim perintah ke alat.</small></div>
       </article>
 
       <aside class="status-column">
