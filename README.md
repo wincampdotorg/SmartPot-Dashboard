@@ -2,6 +2,13 @@
 
 Dashboard statis HTML, CSS, dan JavaScript tanpa framework dan tanpa langkah build. Situs diterbitkan ke GitHub Pages (domain `smartpotbinus.com`) oleh workflow `.github/workflows/pages.yml` setiap ada push ke branch `main`.
 
+## Versi
+
+- `https://smartpotbinus.com/` (berkas di root): dashboard versi 1, tidak diubah.
+- `https://smartpotbinus.com/v2/` (folder `v2/`): dashboard versi 2 dengan tampilan sederhana, ekspor CSV, dan perbandingan hari aturan vs hari AI. Kedua versi memakai API, broker MQTT, dan login yang sama.
+
+Bagian di bawah menjelaskan versi 2; nama berkas relatif terhadap folder `v2/`.
+
 ## Halaman
 
 - `login.html`: halaman masuk.
