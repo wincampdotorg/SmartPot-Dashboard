@@ -1,57 +1,91 @@
 # SmartPot Dashboard
 
-Dashboard statis HTML, CSS, dan JavaScript yang diterbitkan melalui GitHub Pages.
+Dashboard statis HTML, CSS, dan JavaScript tanpa framework dan tanpa langkah build. Situs diterbitkan ke GitHub Pages (domain `smartpotbinus.com`) oleh workflow `.github/workflows/pages.yml` setiap ada push ke branch `main`.
 
-- `index.html`: grafik dan tabel telemetry dari MySQL OVH (`Smartport.telemetry`) melalui API HTTPS. Pilih Simulasi atau Data alat serta periode 24/48/72 jam. Simulasi tiga hari dibuat satu titik per menit, berlabel terpisah dari alat. Riwayat diperbarui setiap 30 detik, tabel 10 data per halaman. Mode alat menampilkan keadaan kosong saat belum ada telemetry; tidak mengganti data asli dengan simulasi. Kredensial MySQL tetap di OVH.
+## Halaman
 
-API baca: `https://wincamp.web.id/smartpot/api/telemetry?source=simulation&hours=72`. Ganti source menjadi `device` untuk alat `smartpot-01`; ID perangkat lain dapat diberikan lewat `device_id`. Timestamp epoch milidetik; UI menggunakan WIB. Maksimal 5.000 baris terbaru. Tidak lagi menggunakan data.json sebagai sumber halaman Ringkasan.
+- `login.html`: halaman masuk.
+- `index.html`: Ringkasan dengan bagian Tren, Prediksi AI, Perangkat, dan Data.
 - `live-demo.html`: pemutaran simulasi data sensor secara real-time.
-- `index.html#perangkat`: visualisasi perangkat, jadwal harian, serta riwayat penyiraman dan grow light 3 hari dari MQTT over WSS, terpusat di Ringkasan. `device.html` mengarahkan tautan lama ke bagian ini. Profil MQTT web panel terpilih otomatis, dan halaman menyambung kembali saat dibuka atau jaringan pulih. Kredensial web panel tertanam di JavaScript publik sesuai persetujuan pemilik proyek.
+- `device.html`: tautan lama yang diarahkan ke `index.html#perangkat`.
 
-Dashboard memulihkan status grow light dan level air dari cache browser, lalu memperbaruinya dari MQTT. Android menerbitkan status grow light/RGB sebagai retained di `smartpot/control/light` dan level air sebagai retained di `smartpot/state/water`; telemetry air juga diterima dari payload JSON atau topik water-level.
+## Tampilan
 
-Aplikasi Android menyimpan riwayat aktuator di SQLite dan menerbitkan snapshot retained pada `smartpot/history/watering` dan `smartpot/history/grow-light`. Dashboard menampilkan dua tabel riwayat terpisah dan menyimpan cache lokal browser. Riwayat mulai tersedia setelah aplikasi Android yang mendukung snapshot ini berjalan; catatan sebelum itu tidak dapat dipulihkan.
+Gaya sederhana: font sistem (`-apple-system`/SF), satu warna aksen hijau, kartu membulat dengan bayangan tipis, kontrol segmen untuk Sumber, Periode, dan parameter grafik. Mode terang dan gelap mengikuti `prefers-color-scheme`. Animasi pompa, lampu, dan tombol dimatikan saat `prefers-reduced-motion` aktif; aliran air tetap tampil statis. Rincian yang jarang dibutuhkan (pengaturan broker, detail model, event, evaluasi, tabel per jam) berada di bagian yang dapat dibuka-tutup.
 
-GitHub Pages memakai branch `main` dari root repository.
+Gaya ada di `app.css` (dashboard dan login) serta `export-pdf.css` (pratinjau dan cetak PDF). Bootstrap tidak lagi dipakai pada `index.html` dan `login.html`. Pilihan Sumber dan Periode tetap disimpan di elemen `<select>` tersembunyi (`#history-source`, `#history-hours`); `segmented.js` menyinkronkan kontrol segmen dengan select tersebut sehingga skrip lain tidak berubah.
 
-Visualisasi perangkat dan grafik riwayat penyiraman menggunakan satu sesi MQTT bersama. CSS perangkat dibatasi pada `.device-workspace` agar tampilan Ringkasan dan Bootstrap tetap konsisten.
+Tabel dan grafik lebar memiliki area gulir sendiri pada ponsel. Grafik perbandingan menyesuaikan lebar layar.
+
+## Riwayat sensor
+
+Grafik dan tabel membaca telemetry dari MySQL OVH (`Smartport.telemetry`) melalui API HTTPS. Pilih Simulasi atau Alat serta periode 24 jam, 2 hari, atau 3 hari. Simulasi tiga hari berisi satu titik per menit dan diberi label terpisah dari data alat. Riwayat diperbarui setiap 30 detik; tabel menampilkan 10 data per halaman. Mode alat menampilkan keadaan kosong saat belum ada telemetry dan tidak mengganti data asli dengan simulasi. Kredensial MySQL tetap di server.
+
+API baca: `https://wincamp.web.id/smartpot/api/telemetry?source=simulation&hours=72`. Ganti `source` menjadi `device` untuk data alat; `profile=tdr2` memakai device `smartpot-tdr2`, `profile=web-panel` memakai `smartpot-01`. Timestamp dalam epoch milidetik; UI memakai WIB. Maksimal 5.000 baris terbaru.
+
+## Perangkat dan MQTT
+
+Bagian Perangkat menampilkan visualisasi grow light dan pompa, jadwal harian, serta riwayat penyiraman dan grow light 3 hari dari MQTT over WSS dan katalog Smartport. Dashboard memulihkan status grow light dan level air dari cache browser, lalu memperbaruinya dari MQTT. Android menerbitkan status grow light/RGB sebagai retained di `smartpot/control/light` dan level air di `smartpot/state/water`.
+
+Pilihan Profil ada di bagian atas halaman. Profil TDR2 memakai broker `ifb44421.ala.asia-southeast1.emqxsl.com`; profil Web Panel memakai broker `af2f1247.ala.asia-southeast1.emqxsl.com` (device `smartpot-01`). Kredensial kedua profil tertanam di `device.js`, sehingga dapat dibaca siapa pun yang membuka JavaScript situs; broker tersebut khusus untuk proyek ini. Profil tersimpan setelah broker mengonfirmasi koneksi, dipulihkan dari cookie preferensi 30 hari, localStorage, atau sessionStorage (cookie tidak memuat username/password). Saat profil berubah, sumber berpindah ke Alat dan status/riwayat profil sebelumnya tidak dipakai. Alamat broker, username, password, serta tombol Hubungkan/Putuskan ada di bagian **Pengaturan broker MQTT**.
+
+Collector TDR2 di OVH memperbarui satu baris per menit menggunakan telemetry terbaru. Pembacaan 0 adalah nilai yang dikirim alat, bukan keadaan kosong.
+
+**Pratinjau aliran · 5 detik** hanya menampilkan visual aliran air tanpa mengirim MQTT, menulis riwayat, atau mengubah persentase air. `pump-signal.js` menerima ON/OFF mentah, JSON string, boolean, angka 1/0, serta objek state/status_pump/pump/action. Sisi naik ON memulai visual lima detik penuh; OFF lebih awal tidak memotong animasi dan ON berulang tidak memperpanjangnya.
 
 ## Login demo
 
-`login.html` memakai akun hardcode `admin` / `admin`. Cookie `smartpot_demo_session` menyimpan penanda login, tanpa password. Pilihan Ingat saya memberi Max-Age 30 hari; tanpa pilihan ini cookie berlaku untuk sesi browser. Cookie memakai SameSite=Lax, path repository dan Secure pada HTTPS. Tombol Keluar menghapus cookie. Ringkasan dan Demo memeriksa sesi sebelum menjalankan pemuatan data/MQTT; tautan Perangkat lama diarahkan ke Ringkasan. Tujuan setelah login dibatasi pada halaman situs sendiri.
+`login.html` memakai akun hardcode `admin` / `admin`. Cookie `smartpot_demo_session` menyimpan penanda login tanpa password. Pilihan Ingat saya memberi Max-Age 30 hari; tanpa pilihan ini cookie berlaku untuk sesi browser. Cookie memakai SameSite=Lax, path repository, dan Secure pada HTTPS. Tombol Keluar menghapus cookie. Tujuan setelah login dibatasi pada halaman situs sendiri.
 
-Login ini adalah pembatas tampilan untuk tugas kuliah di GitHub Pages. JavaScript, aset dan API baca tetap publik; cookie dapat diubah pengguna. Ini bukan autentikasi server untuk data privat.
+Login ini hanya pembatas tampilan untuk tugas kuliah di GitHub Pages. JavaScript, aset, dan API baca tetap publik; cookie dapat diubah pengguna. Ini bukan autentikasi server untuk data privat.
 
-## Profil TDR2
+## Prediksi AI
 
-Profil TDR2 memakai broker `ifb44421.ala.asia-southeast1.emqxsl.com`, kredensial yang diberikan pemilik, dan otomatis terhubung ketika dipilih. Profil pilihan disimpan di browser; pemasangan baru memakai TDR2. Saat profil berubah, kartu sensor berpindah ke Data alat, status dan riwayat tidak diambil dari profil sebelumnya. Kartu sensor menerima pesan JSON `smartpot/telemetry` secara langsung; API riwayat menggunakan parameter `profile=tdr2` untuk device `smartpot-tdr2`. Broker Web Panel tetap memakai device `smartpot-01`.
+Bagian **Prediksi AI** mengikuti Profil dan Sumber yang dipilih. Semua hasil bersifat bayangan (*shadow*): perangkat lunak tidak pernah menyalakan pompa.
 
-Collector TDR2 di OVH berjalan terpisah dan memperbarui satu baris per menit menggunakan telemetry terbaru agar riwayat tiga hari tetap ringkas. Pembacaan 0 adalah nilai valid yang dikirim alat, bukan keadaan kosong.
+Endpoint baca: `https://wincamp.web.id/smartpot/api/ai?profile=tdr2&source=device`. Worker OVH berjalan setiap lima menit; halaman memperbarui hasil setiap menit saat aktif.
 
-Profil MQTT disimpan setelah broker mengonfirmasi koneksi berhasil, bukan saat dropdown baru diubah. ID profil dipulihkan dari cookie preferensi 30 hari, localStorage, atau sessionStorage. Cookie profil tidak memuat username/password. Refresh menyambung ulang dengan profil yang tersimpan; Putuskan tetap menghentikan sambung otomatis pada sesi tab tersebut.
+### Perbandingan aturan sensor vs prediksi AI
+
+Dibaca dari `run.report.comparison` (metode `replay_harian_v1`):
+
+- Kartu **Kemarin · aturan sensor**: aturan ambang tanah (default 40%, 3 pembacaan valid berturut-turut, jeda 30 menit, maksimal 8 kali per hari) diputar ulang pada data sensor nyata hari tersebut.
+- Kartu **Hari ini · prediksi AI**: model yang hanya dilatih dengan data sampai akhir hari aturan memprediksi kelembapan tanah dan waktu siram hari ini, lalu dibandingkan dengan data nyata dan dengan aturan yang diterapkan pada data nyata hari ini. MAE model ditampilkan bersama MAE persistensi (nilai awal dipertahankan).
+- Label Kemarin/Hari ini dipakai bila tanggalnya cocok dengan tanggal WIB saat ini; selain itu (misalnya data simulasi) ditampilkan Hari pertama/Hari kedua beserta tanggalnya.
+- Setiap kartu menampilkan cakupan data (menit valid dari 1.440 menit). Pembacaan valid: 0 < tanah ≤ 100 dan bukan bagian dari ≥ 10 baris berturut-turut dengan tanah = level air.
+- Grafik SVG menampilkan prediksi vs aktual per jam, garis ambang, serta jalur waktu siram AI dan aturan. Tabel per jam tersedia di bagian yang dapat dibuka.
+- Kesimpulan, **Rencana besok**, dan catatan (termasuk peringatan cakupan data) berasal dari server. Jika perbandingan belum ada atau berisi `error`, halaman menampilkan "Perbandingan belum tersedia".
+
+Pot uji saat ini tanpa tanaman dan alat belum terpasang sempurna, sehingga hasil perbandingan perlu dibaca bersama cakupan data dan catatannya.
+
+### Prediksi singkat dan detail
+
+Prediksi kelembapan tanah 30/60/120 menit memakai regresi ridge per sumber/perangkat dengan MAE model dibandingkan pembanding persistensi. Model yang tidak mengungguli pembanding diberi label belum layak. Detail model, enam tahap pengolahan, waktu event 24 jam (10 data per halaman), pola waktu event untuk rencana besok, evaluasi jadwal, dan MAE aktual 3 hari ada di bagian **Detail model, event, dan evaluasi**. Simulasi adalah replay dari akhir data historis dengan batas demonstrasi 45%; data simulasi tidak dipakai sebagai pengganti data alat.
+
+## Ekspor CSV
+
+Tombol **Ekspor CSV** di samping **Ekspor PDF** membuka pilihan:
+
+- **Data sensor**: baris telemetry untuk profil, sumber, dan periode yang dipilih, diambil ulang dari API saat diunduh (bukan dari pembaruan MQTT di memori browser). Kolom: `waktu_wib, device_id, sumber_data, tanah_pct, suhu_c, udara_pct, air_pct, baterai_pct`, urut dari lama ke baru. `sumber_data` berisi `data_source` dari database (misalnya `mqtt_tdr2`, `isian_simulasi_tdr2`, `simulation_3days`), sehingga baris isian simulasi tidak tercampur dengan data alat.
+- **Perbandingan aturan vs AI**: 24 baris per jam untuk hari aturan dan 24 baris untuk hari AI. Kolom: `tanggal, jam_wib, hari (aturan|ai), tanah_aktual_pct, prediksi_ai_pct, aturan_siram, ai_siram` (jumlah siram dalam jam tersebut). Nilai aktual hari AI berasal dari `forecast_vs_actual` apa adanya (jam tanpa titik server diisi dari telemetry); nilai aktual hari aturan dihitung dari telemetry 72 jam dengan aturan validitas, pembulatan per menit, dan median ±5 menit di dalam hari yang sama dengan server. Karena API telemetry membaca 72 jam terakhir dari waktu sekarang, simulasi lama dapat membuat kolom aktual hari aturan kosong; pesan status menyebutkannya. Kolom yang tidak berlaku dikosongkan.
+
+Format:
+
+- **CSV standar**: pemisah koma, desimal titik, UTF-8 tanpa BOM (pandas, Python, Google Sheets).
+- **CSV Excel Indonesia**: pemisah titik koma, desimal koma, UTF-8 dengan BOM.
+
+Akhir baris CRLF dan kutipan mengikuti RFC 4180. Teks yang diawali `=`, `+`, `-`, atau `@` diberi awalan apostrof agar tidak dibaca sebagai rumus; nilai angka tidak diubah. Nama file: `smartpot_<profil>_<alat|simulasi>_<sensor|perbandingan>_<YYYYMMDD>_WIB.csv`, misalnya `smartpot_tdr2_alat_sensor_20261106_WIB.csv`.
+
+Logika CSV murni berada di `csv-core.js` (dapat di-`require` dari Node); antarmuka unduhan ada di `export-csv.js`.
 
 ## Ekspor PDF
 
-Klik **Ekspor PDF** pada Ringkasan untuk membuka pratinjau laporan sesuai profil MQTT, sumber data, dan periode 24/48/72 jam yang dipilih. Laporan memuat ringkasan sensor, grafik parameter terpilih, jadwal harian, riwayat penyiraman/grow light, serta semua baris sensor yang dimuat (maksimal 5.000), tanpa mengikuti paginasi tabel. Data simulasi diberi label. Riwayat aktuator mengikuti data MQTT/cache yang tersedia pada browser.
+**Ekspor PDF** membuka pratinjau laporan sesuai profil, sumber, dan periode yang dipilih: ringkasan sensor, grafik parameter terpilih, jadwal harian, riwayat penyiraman/grow light, hasil AI termasuk ringkasan perbandingan aturan vs AI, serta semua baris sensor yang dimuat (maksimal 5.000). Klik **Simpan sebagai PDF**, lalu pilih tujuan Save as PDF pada dialog cetak browser. Format A4 dengan header tabel berulang dan waktu WIB; ekspor berjalan di browser tanpa pustaka tambahan.
 
-Klik **Simpan sebagai PDF**, lalu pilih tujuan **Save as PDF / Simpan sebagai PDF** pada dialog cetak browser. Pada iPhone/iPad gunakan opsi cetak dan bagikan/simpan PDF dari pratinjau sistem. Format cetak A4 memakai header tabel berulang dan waktu WIB. Ekspor berjalan di browser tanpa pustaka atau layanan PDF tambahan.
+## Pengujian
 
-## Prediksi dan jadwal rekomendasi AI
+```
+node --test tests/
+```
 
-Menu **Prediksi AI** di Ringkasan menampilkan enam tahap sensor-ke-rekomendasi, prediksi kelembapan tanah 30/60/120 menit, MAE model vs pembanding, evaluasi terhadap sensor aktual, dan sepuluh evaluasi jadwal terakhir dari database Smartport. Profil dan sumber mengikuti pilihan di bagian Sensor; rentang riwayat 24/48/72 jam tidak mengubah jendela latihan model 14 hari. Worker OVH berjalan setiap lima menit meskipun browser ditutup; halaman memperbarui pembacaan hasil setiap menit saat aktif.
-
-Endpoint baca: `https://wincamp.web.id/smartpot/api/ai?profile=tdr2&source=device`. Mode **recommendation_only**: kandidat AI tidak diterbitkan ke ESP32 dan tidak mengganti jadwal harian manual. Waktu belum ditentukan ketika kalibrasi/data/model belum layak. Simulasi adalah replay dari akhir data historis, memakai batas demonstrasi 45%, bukan kondisi pot sekarang. Model regresi ridge dilatih per sumber/perangkat; model yang gagal mengungguli pembanding diberi label belum layak. Data simulasi tidak dipakai sebagai fallback alat. Hasil AI ikut disertakan di Ekspor PDF.
-
-Tabel dan grafik memiliki area gulir sendiri pada ponsel, tanpa mengecilkan teks seluruh dashboard. Pesan error mempertahankan hasil sebelumnya hanya untuk profil/sumber yang sama.
-
-Panel AI juga menampilkan **Waktu event · 24 jam terakhir** (10 data per halaman) dan **Rekomendasi jadwal besok**. Event ditulis langsung oleh collector ke MySQL saat pesan/transisi terjadi. Grow light OFF terpisah; perubahan RGB tidak membuat jadwal. Kombinasi Pump + Grow light ditandai berdasarkan kedekatan ≤5 detik, dengan bukti penggabungan ditampilkan. Riwayat lama tetap tersimpan. Waktu event lama yang tidak dapat dikaitkan ke broker secara pasti tidak diarang atau di-backfill.
-
-Rencana besok memakai pengelompokan pola waktu 24 jam, terpisah dari regresi kelembapan 30/60/120 menit. Median jam/menit dipersistenkan di Smartport.ai_daily_plans; satu hari tetap berstatus rencana awal untuk ditinjau. Ponsel Android dapat membaca data yang sama dari menu Schedule. Perubahan status MQTT memperbarui pembacaan panel setelah jeda singkat untuk commit database; rencana besok diperbarui worker setiap lima menit. Ekspor PDF menyertakan rencana besok.
-
-## Pratinjau visual penyiraman
-
-Di bagian Perangkat tersedia **Pratinjau aliran · 5 detik**. Tombol ini hanya menampilkan selang/aliran air dan label pratinjau, tanpa mengirim MQTT, menulis riwayat, atau mengubah persentase air. Status pompa asli tetap terpisah. Saat pesan ON asli masuk, pratinjau dibatalkan dan visual mengikuti MQTT; OFF mengakhiri visual asli. Aliran mengarah ke bibir pot dan lebih kontras. Pengaturan reduced-motion memakai aliran statis yang tetap terlihat, tanpa durasi animasi global 0,01 ms.
-
-`pump-signal.js` menerima ON/OFF mentah, JSON string, boolean, angka 1/0, serta objek state/status_pump/pump/action. Payload yang bukan status tidak mengubah visual. Jalankan `node --test tests/pump-signal.test.cjs` untuk 16 kasus payload. Node test runner melaporkannya sebagai satu file uji.
-
-Animasi event pompa kini memakai timer visual terpisah: sisi naik ON memulai aliran lima detik penuh, OFF lebih cepat hanya memperbarui label status alat dan tidak memotong animasi. ON berulang tidak memperpanjang timer. Status aktual tetap mengikuti MQTT; visual tidak mengirim kontrol, tidak mengubah air atau riwayat. Empat pengujian jam buatan mencakup OFF pada detik pertama, ON berulang, siklus berikutnya, dan pembersihan saat pindah profil.
+`tests/pump-signal.test.cjs` menguji parser sinyal pompa dan durasi visual; `tests/csv-core.test.cjs` menguji format angka, escape RFC 4180, netralisasi rumus, BOM, aturan validitas pembacaan, median per jam, baris perbandingan, dan nama file. Setelah mengubah file JS/CSS, naikkan nilai `?v=` di `index.html` atau `login.html`.
