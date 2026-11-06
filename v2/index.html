@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="id" data-auth-required>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/svg+xml" href="assets/smartpot-mark.svg">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self' https://unpkg.com; img-src 'self' data:; connect-src 'self' wss: https://wincamp.web.id; base-uri 'self'; form-action 'self'; object-src 'none'">
+  <link rel="stylesheet" href="auth.css?v=1">
+  <script src="auth.js?v=1"></script>
+  <title>SmartPot — Ringkasan</title>
+  <link rel="stylesheet" href="app.css?v=1">
+  <link rel="stylesheet" href="export-pdf.css?v=2">
+  <script src="https://unpkg.com/mqtt@5.16.1/dist/mqtt.min.js" crossorigin="anonymous" defer></script>
+  <script src="csv-core.js?v=1" defer></script>
+  <script src="segmented.js?v=1" defer></script>
+  <script src="export-pdf.js?v=3" defer></script>
+  <script src="dashboard.js?v=apple-1" defer></script>
+  <script src="pump-signal.js?v=2" defer></script>
+  <script src="device.js?v=apple-1" defer></script>
+  <script src="ai-dashboard.js?v=3" defer></script>
+  <script src="comparison-view.js?v=1" defer></script>
+  <script src="export-csv.js?v=1" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#ringkasan">Langsung ke konten</a>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-inner">
+        <a class="brand" href="./" aria-label="SmartPot, ringkasan">
+          <img src="assets/smartpot-mark.svg" alt="" width="28" height="28">
+          <span>SmartPot</span>
+        </a>
+        <nav class="header-nav" aria-label="Bagian halaman">
+          <a href="#ringkasan">Ringkasan</a>
+          <a href="#grafik">Tren</a>
+          <a href="#prediksi-ai">AI</a>
+          <a href="#perangkat">Perangkat</a>
+          <a href="#data">Data</a>
+          <a href="live-demo.html">Demo</a>
+        </nav>
+        <div class="header-actions">
+          <span class="pill is-offline" id="connection-badge" title="Status koneksi MQTT"><span class="status-dot" aria-hidden="true"></span><span id="connection-label">Belum terhubung</span></span>
+          <button class="icon-button" id="refresh-button" type="button" aria-label="Muat ulang data" title="Muat ulang data"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M5.5 9a7 7 0 0 1 12-2L20 12M4 12l2.5 5a7 7 0 0 0 12-2"/></svg></button>
+          <button class="button button-plain logout-button" type="button" data-logout>Keluar</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="page" id="ringkasan" tabindex="-1">
+      <section class="hero" id="sensor" aria-labelledby="welcome-title">
+        <div>
+          <p class="eyebrow">Hari ini<span aria-hidden="true"> · </span>WIB</p>
+          <h1 id="welcome-title">Selamat datang</h1>
+          <p class="lead">Kondisi pot SmartPot dari sensor, MQTT, dan database Smartport.</p>
+        </div>
+        <div class="hero-actions">
+          <button class="button button-secondary" id="export-csv" type="button">Ekspor CSV</button>
+          <button class="button button-secondary pdf-export-button" id="export-pdf" type="button">Ekspor PDF</button>
+        </div>
+      </section>
+
+      <section class="card controls" aria-label="Pilihan data">
+        <div class="control">
+          <label class="control-label" for="broker-profile">Profil</label>
+          <select id="broker-profile" class="select"><option value="tdr2">TDR2</option><option value="web-panel">SmartPot Web Panel</option></select>
+        </div>
+        <div class="control">
+          <span class="control-label" id="source-segment-label">Sumber</span>
+          <div class="segmented" role="radiogroup" aria-labelledby="source-segment-label" data-segment-for="history-source">
+            <label><input type="radio" name="segment-source" value="device"><span>Alat</span></label>
+            <label><input type="radio" name="segment-source" value="simulation"><span>Simulasi</span></label>
+          </div>
+          <select id="history-source" hidden><option value="simulation">Simulasi · MySQL OVH</option><option value="device">Data alat · SmartPot 01</option></select>
+        </div>
+        <div class="control">
+          <span class="control-label" id="hours-segment-label">Periode</span>
+          <div class="segmented" role="radiogroup" aria-labelledby="hours-segment-label" data-segment-for="history-hours">
+            <label><input type="radio" name="segment-hours" value="24"><span>24 jam</span></label>
+            <label><input type="radio" name="segment-hours" value="48"><span>2 hari</span></label>
+            <label><input type="radio" name="segment-hours" value="72"><span>3 hari</span></label>
+          </div>
+          <select id="history-hours" hidden><option value="72">3 hari terakhir</option><option value="48">2 hari terakhir</option><option value="24">24 jam terakhir</option></select>
+        </div>
+        <div class="controls-status">
+          <span class="pill is-preview" id="source-badge"><span class="status-dot" aria-hidden="true"></span><span id="source-label">Memuat data</span></span>
+          <p id="database-proof" class="caption" role="status" aria-live="polite">Mengambil riwayat dari MySQL OVH…</p>
+          <p class="caption" id="connection-note" role="status" hidden></p>
+          <a id="history-json" class="caption link" href="https://wincamp.web.id/smartpot/api/telemetry?source=simulation&amp;hours=72" target="_blank" rel="noopener">Data JSON ↗</a>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="metrics-title">
+        <div class="section-head">
+          <h2 id="metrics-title">Sekarang</h2>
+          <span class="caption" id="updated-label">Menunggu pembaruan</span>
+        </div>
+        <div class="metrics">
+          <article class="card metric"><span class="metric-name">Tanah</span><p class="metric-value"><strong id="metric-soil">—</strong><span>%</span></p><span class="caption" id="soil-note">Sensor tanah</span><svg class="sparkline" preserveAspectRatio="none" id="spark-soil" viewBox="0 0 112 34" aria-hidden="true"></svg></article>
+          <article class="card metric"><span class="metric-name">Suhu</span><p class="metric-value"><strong id="metric-temp">—</strong><span>°C</span></p><span class="caption">Lingkungan</span><svg class="sparkline" preserveAspectRatio="none" id="spark-temp" viewBox="0 0 112 34" aria-hidden="true"></svg></article>
+          <article class="card metric"><span class="metric-name">Udara</span><p class="metric-value"><strong id="metric-humidity">—</strong><span>%</span></p><span class="caption">Kelembapan relatif</span><svg class="sparkline" preserveAspectRatio="none" id="spark-humidity" viewBox="0 0 112 34" aria-hidden="true"></svg></article>
+          <article class="card metric"><span class="metric-name">Air</span><p class="metric-value"><strong id="metric-water">—</strong><span>%</span></p><span class="caption" id="water-note">Reservoir</span><svg class="sparkline" preserveAspectRatio="none" id="spark-water" viewBox="0 0 112 34" aria-hidden="true"></svg></article>
+          <article class="card metric"><span class="metric-name">Baterai</span><p class="metric-value"><strong id="metric-battery">—</strong><span>%</span></p><span class="caption">Perangkat</span><svg class="sparkline" preserveAspectRatio="none" id="spark-battery" viewBox="0 0 112 34" aria-hidden="true"></svg></article>
+        </div>
+      </section>
+
+      <section class="section" id="grafik" aria-labelledby="chart-title">
+        <div class="card chart-card">
+          <div class="chart-head">
+            <div>
+              <h2 id="chart-title">Kelembapan tanah <span class="chart-current" id="chart-current">—</span></h2>
+              <p class="caption" id="chart-period">24 jam terakhir · interval 1 menit</p>
+            </div>
+            <div class="segmented segmented-buttons" role="group" aria-label="Parameter grafik">
+              <button class="chart-tab is-selected" data-metric="soil_moisture" type="button" aria-pressed="true">Tanah</button>
+              <button class="chart-tab" data-metric="temperature" type="button" aria-pressed="false">Suhu</button>
+              <button class="chart-tab" data-metric="humidity" type="button" aria-pressed="false">Udara</button>
+              <button class="chart-tab" data-metric="water_level" type="button" aria-pressed="false">Air</button>
+            </div>
+          </div>
+          <div class="chart-scroll" data-scroll-end tabindex="0" role="region" aria-label="Grafik tren, dapat digeser ke samping pada layar kecil">
+            <svg id="trend-chart" class="wide-chart" viewBox="0 0 1000 270" role="img" aria-label="Grafik perubahan kelembapan tanah"></svg>
+            <div class="chart-axis"><span id="axis-start">—</span><span id="axis-quarter1">—</span><span id="axis-mid">—</span><span id="axis-quarter3">—</span><span id="axis-end">—</span></div>
+          </div>
+          <div class="playback" id="simulation-bar">
+            <button class="icon-button play-button" id="play-button" type="button" aria-label="Putar riwayat dalam 1 menit" title="Putar riwayat dalam 1 menit"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="icon-play" d="m8 5 11 7-11 7z"/><path class="icon-pause" d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
+            <span class="sr-only" id="simulation-label">Putar riwayat dalam 1 menit</span>
+            <input id="timeline" type="range" min="0" max="1439" value="1439" aria-label="Posisi waktu riwayat" aria-valuetext="Sekarang">
+            <span class="timeline-time" id="timeline-time">—</span>
+          </div>
+          <div class="insights">
+            <p><strong id="insight-title">Pola penyiraman</strong> <span id="insight-description">Perubahan kelembapan tanah akan dirangkum dari data sensor.</span></p>
+            <p><strong id="device-state">Siap dipantau</strong> <span id="device-description">Status koneksi dan waktu data terbaru akan muncul di sini.</span></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="prediksi-ai" aria-labelledby="ai-title">
+        <div class="section-head">
+          <div>
+            <h2 id="ai-title">Prediksi AI</h2>
+            <p class="section-sub">Mode bayangan: perangkat lunak tidak pernah menyalakan pompa. Profil dan sumber mengikuti pilihan di atas.</p>
+          </div>
+          <button id="ai-refresh" class="button button-plain" type="button">Muat ulang</button>
+        </div>
+        <p id="ai-error" class="banner banner-error" role="status" hidden></p>
+        <div id="ai-results" hidden>
+          <p id="ai-summary" class="banner"></p>
+
+          <div class="compare" aria-labelledby="compare-title">
+            <h3 id="compare-title">Aturan sensor vs prediksi AI</h3>
+            <p class="section-sub" id="compare-intro">Hari pertama memakai aturan ambang tanah pada data sensor nyata. Hari kedua memakai model yang hanya dilatih dengan data sampai akhir hari pertama.</p>
+            <div class="card empty-state" id="compare-empty"><strong>Perbandingan belum tersedia</strong><span id="compare-empty-reason">Menunggu hasil worker untuk profil dan sumber ini.</span></div>
+            <div id="compare-body" hidden>
+              <div class="verdict" id="compare-verdict" role="status"><span class="verdict-badge" id="compare-verdict-badge">—</span><p id="compare-verdict-text"></p></div>
+              <div class="compare-grid">
+                <article class="card day-card" id="compare-rule" aria-labelledby="compare-rule-title"></article>
+                <article class="card day-card" id="compare-ai" aria-labelledby="compare-ai-title"></article>
+              </div>
+              <figure class="card compare-chart-card">
+                <figcaption><strong id="compare-chart-title">Kelembapan tanah · prediksi vs aktual</strong><span class="caption" id="compare-chart-caption"></span></figcaption>
+                <div class="legend" aria-hidden="true">
+                  <span><i class="key key-actual"></i>Aktual</span>
+                  <span><i class="key key-ai"></i>Prediksi AI</span>
+                  <span><i class="key key-threshold"></i>Ambang</span>
+                  <span><i class="key key-dot-ai"></i>Siram AI</span>
+                  <span><i class="key key-dot-rule"></i>Siram aturan (data nyata)</span>
+                </div>
+                <div class="compare-chart-wrap" id="compare-chart-wrap">
+                  <svg id="compare-chart" class="compare-chart" role="img" aria-label="Grafik prediksi dan aktual kelembapan tanah"></svg>
+                </div>
+              </figure>
+              <div class="compare-grid">
+                <article class="card plan-card" aria-labelledby="compare-tomorrow-title">
+                  <h4 id="compare-tomorrow-title">Rencana besok</h4>
+                  <p class="caption" id="compare-tomorrow-meta"></p>
+                  <ul class="time-list" id="compare-tomorrow"></ul>
+                </article>
+                <article class="card plan-card" aria-labelledby="compare-notes-title">
+                  <h4 id="compare-notes-title">Catatan</h4>
+                  <ul class="notes" id="compare-notes"></ul>
+                </article>
+              </div>
+              <details class="disclosure">
+                <summary>Tabel per jam</summary>
+                <div class="table-scroll" tabindex="0" role="region" aria-label="Tabel per jam aturan dan AI">
+                  <table class="table"><thead><tr><th scope="col">Tanggal</th><th scope="col">Jam WIB</th><th scope="col">Hari</th><th scope="col">Tanah aktual %</th><th scope="col">Prediksi AI %</th><th scope="col">Siram aturan</th><th scope="col">Siram AI</th></tr></thead><tbody id="compare-rows"></tbody></table>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <h3>Prediksi singkat</h3>
+          <div class="stats">
+            <div class="stat"><span>Status model</span><strong id="ai-model-state">—</strong></div>
+            <div class="stat"><span>Data latih</span><strong id="ai-data-count">—</strong></div>
+            <div class="stat"><span>Usulan waktu</span><strong id="ai-next-time">—</strong></div>
+          </div>
+          <div class="card chart-card">
+            <div class="chart-scroll" tabindex="0" role="region" aria-label="Grafik prediksi 30 sampai 120 menit"><svg id="ai-chart" class="ai-chart" viewBox="0 0 800 230" role="img" aria-label="Prediksi kelembapan tanah"></svg></div>
+            <p class="caption">Titik pertama adalah sensor terakhir; garis putus-putus adalah prediksi. MAE model dibandingkan dengan pembanding persistensi (nilai sensor terakhir dipertahankan); semakin kecil semakin baik.</p>
+            <div class="table-scroll" tabindex="0" role="region" aria-labelledby="ai-forecast-title">
+              <table class="table"><caption class="sr-only" id="ai-forecast-title">Prediksi kelembapan tanah</caption><thead><tr><th scope="col">Horizon</th><th scope="col">Waktu WIB</th><th scope="col">Prediksi tanah</th><th scope="col">MAE model / pembanding</th><th scope="col">Kelayakan</th></tr></thead><tbody id="ai-forecast-rows"></tbody></table>
+            </div>
+          </div>
+
+          <details class="disclosure">
+            <summary>Detail model, event, dan evaluasi</summary>
+            <p id="ai-model-note" class="caption"></p>
+            <ol class="steps"><li>Sensor ke MySQL<small id="ai-flow-1"></small></li><li>Arsip perawatan<small id="ai-flow-2"></small></li><li>Belajar dari riwayat<small id="ai-flow-3"></small></li><li>Prediksi 30 / 60 / 120 menit<small id="ai-flow-4"></small></li><li>Simpan jadwal rekomendasi<small id="ai-flow-5"></small></li><li>Periksa kondisi kembali<small id="ai-flow-6"></small></li></ol>
+            <h4 id="ai-observed-title">Waktu event · 24 jam terakhir</h4>
+            <p id="ai-observed-note" class="caption"></p>
+            <div class="table-scroll" tabindex="0" role="region" aria-labelledby="ai-observed-title"><table class="table"><thead><tr><th scope="col">Waktu WIB</th><th scope="col">Aksi</th><th scope="col">Bukti event</th></tr></thead><tbody id="ai-observed-rows"></tbody></table></div>
+            <nav class="pager" aria-label="Halaman waktu event"><button id="ai-events-prev" type="button" class="button button-secondary">Sebelumnya</button><span id="ai-events-page"></span><button id="ai-events-next" type="button" class="button button-secondary">Berikutnya</button></nav>
+            <h4 id="ai-tomorrow-title">Pola waktu event · rencana besok</h4>
+            <p id="ai-tomorrow-note" class="caption"></p>
+            <div class="table-scroll" tabindex="0" role="region" aria-labelledby="ai-tomorrow-title"><table class="table"><thead><tr><th scope="col">Jam WIB</th><th scope="col">Aksi</th><th scope="col">Event pendukung</th><th scope="col">Status</th><th scope="col">Alasan</th></tr></thead><tbody id="ai-daily-plan-rows"></tbody></table></div>
+            <h4 id="ai-schedules-title">Evaluasi penyiraman · 30–120 menit</h4>
+            <p id="ai-calibration-note" class="caption"></p>
+            <div class="table-scroll" tabindex="0" role="region" aria-labelledby="ai-schedules-title"><table class="table"><thead><tr><th scope="col">Catatan</th><th scope="col">Usulan waktu WIB</th><th scope="col">Status</th><th scope="col">Alasan</th></tr></thead><tbody id="ai-schedule-rows"></tbody></table></div>
+            <h4 id="ai-evaluation-title">Prediksi vs sensor aktual · 3 hari</h4>
+            <div class="table-scroll" tabindex="0" role="region" aria-labelledby="ai-evaluation-title"><table class="table"><thead><tr><th scope="col">Horizon</th><th scope="col">Jumlah pasangan</th><th scope="col">MAE aktual</th></tr></thead><tbody id="ai-evaluation-rows"></tbody></table></div>
+            <p id="ai-proof" class="caption proof"></p>
+          </details>
+        </div>
+      </section>
+
+      <section class="section" id="perangkat" aria-labelledby="device-title">
+        <div class="section-head">
+          <div>
+            <h2 id="device-title">Perangkat</h2>
+            <p class="section-sub">Visualisasi grow light dan pompa mengikuti pesan MQTT langsung dari ESP32.</p>
+          </div>
+        </div>
+        <div class="device-grid">
+          <div class="card scene-card">
+            <div class="scene-wrap" id="scene-wrap">
+              <div id="pump-visual-status" class="pump-visual-status" role="status" hidden></div>
+              <svg class="device-scene" viewBox="0 0 800 560" role="img" aria-labelledby="scene-title scene-description">
+                <title id="scene-title">Pot tanaman SmartPot dengan grow light dan reservoir air</title>
+                <desc id="scene-description">Grow light berada di atas tanaman. Reservoir berada di bawah pot dan air mengalir saat pompa aktif.</desc>
+                <defs>
+                  <linearGradient id="pot-gradient" x1="0" x2="1"><stop offset="0" stop-color="#bd805b"/><stop offset=".48" stop-color="#dfa986"/><stop offset="1" stop-color="#b97854"/></linearGradient>
+                  <linearGradient id="glass-gradient" x1="0" x2="1"><stop offset="0" stop-color="#dff4fa" stop-opacity=".74"/><stop offset=".5" stop-color="#fff" stop-opacity=".94"/><stop offset="1" stop-color="#cae9f2" stop-opacity=".82"/></linearGradient>
+                  <linearGradient id="water-gradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#77c8e8" stop-opacity=".82"/><stop offset="1" stop-color="#3197c7" stop-opacity=".92"/></linearGradient>
+                  <filter id="soft-glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="16"/></filter>
+                  <clipPath id="water-clip"><path d="M237 421 Q400 438 563 421 L548 500 Q400 524 252 500Z"/></clipPath>
+                </defs>
+                <ellipse class="scene-floor" cx="400" cy="520" rx="242" ry="20"/>
+                <circle id="light-glow" cx="400" cy="186" r="166" fill="#f4dfa9" opacity=".12" filter="url(#soft-glow)"/>
+                <g class="lamp">
+                  <path d="M310 54 Q400 35 490 54 L477 92 Q400 110 323 92Z" fill="#f7f7f8" stroke="#d9dadd" stroke-width="3"/>
+                  <path d="M326 87 Q400 101 474 87 L465 103 Q400 118 335 103Z" fill="#34383d"/>
+                  <g id="leds" fill="#f5df9a"><circle cx="351" cy="96" r="5"/><circle cx="375" cy="99" r="5"/><circle cx="400" cy="100" r="5"/><circle cx="425" cy="99" r="5"/><circle cx="449" cy="96" r="5"/></g>
+                  <path d="M400 53V24" stroke="#a7a9ae" stroke-width="4" stroke-linecap="round"/>
+                  <path d="M377 24H423" stroke="#a7a9ae" stroke-width="4" stroke-linecap="round"/>
+                </g>
+                <g class="light-rays" stroke="#edcf75" stroke-width="3" stroke-linecap="round"><path d="M345 127L321 222"/><path d="M374 131L362 230"/><path d="M400 134V232"/><path d="M426 131L438 230"/><path d="M455 127L479 222"/></g>
+                <g class="plant">
+                  <path d="M400 338C400 290 399 228 400 166" fill="none" stroke="#557c5c" stroke-width="9" stroke-linecap="round"/>
+                  <path d="M398 270C361 239 326 220 292 219" fill="none" stroke="#628a66" stroke-width="6" stroke-linecap="round"/>
+                  <path d="M402 246C440 215 475 201 508 204" fill="none" stroke="#628a66" stroke-width="6" stroke-linecap="round"/>
+                  <path class="device-leaf" d="M395 268C353 273 306 254 286 218C321 185 376 200 395 268Z" fill="#74a67b"/>
+                  <path class="device-leaf" d="M404 245C428 197 473 176 515 201C503 245 458 266 404 245Z" fill="#5d9468"/>
+                  <path class="device-leaf" d="M397 203C367 188 355 151 376 123C408 143 418 174 397 203Z" fill="#8ab58a"/>
+                  <path class="device-leaf" d="M403 183C407 146 437 117 472 121C472 157 444 184 403 183Z" fill="#6fa376"/>
+                  <path class="device-leaf" d="M397 319C359 335 323 323 306 292C335 268 378 281 397 319Z" fill="#729d71"/>
+                  <g class="veins" fill="none" stroke="#d6e5d1" stroke-opacity=".7" stroke-width="2"><path d="M395 267L303 222"/><path d="M405 244L506 205"/><path d="M398 202L379 129"/><path d="M403 182L466 126"/><path d="M397 319L313 296"/></g>
+                </g>
+                <g class="planter">
+                  <path d="M331 319H469L452 408Q400 426 348 408Z" fill="url(#pot-gradient)" stroke="#a96d4e" stroke-width="3"/>
+                  <path d="M323 310Q400 300 477 310L471 333Q400 343 329 333Z" fill="#bd805c" stroke="#a96d4e" stroke-width="3"/>
+                  <path d="M344 341Q400 351 456 341" fill="none" stroke="#efc9a8" stroke-opacity=".68" stroke-width="3"/>
+                  <path d="M356 388Q400 399 444 388" fill="none" stroke="#a96d4e" stroke-opacity=".45" stroke-width="3"/>
+                </g>
+                <g class="reservoir">
+                  <path d="M237 421Q400 438 563 421L548 500Q400 524 252 500Z" fill="url(#glass-gradient)" stroke="#b6d6e0" stroke-width="3"/>
+                  <rect id="reservoir-fill" x="240" y="454" width="320" height="60" fill="url(#water-gradient)" clip-path="url(#water-clip)"/>
+                  <path id="reservoir-wave" d="M246 455Q290 445 335 455T424 455T513 455T559 455" fill="none" stroke="#c8f1ff" stroke-width="3" opacity=".9"/>
+                  <path d="M270 474Q400 489 530 474" fill="none" stroke="#e8fbff" stroke-opacity=".68" stroke-width="2"/>
+                  <path d="M243 421Q400 438 557 421" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+                </g>
+                <g class="pump-tube" fill="none" stroke="#759ba9" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M529 452V300Q529 284 513 284H455"/><path class="water-flow" d="M529 452V300Q529 284 513 284H455"/></g>
+                <circle class="pump-nozzle" cx="451" cy="284" r="7" fill="#759ba9"/>
+                <path class="water-jet" d="M451 291V314" fill="none" stroke="#1689d1" stroke-width="6" stroke-linecap="round"/><g class="flow-drops" fill="#1689d1"><circle class="drop drop-one" cx="451" cy="296" r="7"/><circle class="drop drop-two" cx="451" cy="303" r="4"/><circle class="drop drop-three" cx="451" cy="310" r="3"/></g>
+                <g class="esp32-module" aria-label="Modul ESP32 yang terhubung ke SmartPot">
+                  <path d="M555 274H586V296H537V356H555" fill="none" stroke="#688b78" stroke-width="3" stroke-dasharray="5 5"/>
+                  <rect x="584" y="278" width="128" height="82" rx="10" fill="#376e5a" stroke="#285444" stroke-width="3"/>
+                  <rect x="599" y="292" width="49" height="47" rx="4" fill="#263a36"/>
+                  <path d="M610 300v31m8-31v31m8-31v31m8-31v31" stroke="#9ab3a7" stroke-width="2"/>
+                  <path d="M585 289h-7m7 9h-7m7 9h-7m7 9h-7m7 9h-7m7 9h-7m134-42h7m-7 9h7m-7 9h7m-7 9h7m-7 9h7" stroke="#d1b77d" stroke-width="3" stroke-linecap="round"/>
+                  <circle cx="681" cy="299" r="4" fill="#80d5a0"/>
+                  <text x="674" y="323" text-anchor="middle" fill="#eff8f2" font-size="11" font-weight="700">ESP32</text>
+                  <text x="674" y="340" text-anchor="middle" fill="#c6dcd0" font-size="7" letter-spacing="1">SMARTPOT · MQTT</text>
+                  <path d="M584 348H558V386H538" fill="none" stroke="#759ba9" stroke-width="3" stroke-dasharray="5 5"/>
+                </g>
+                <text x="400" y="548" text-anchor="middle" class="scene-caption">RESERVOIR AIR · <tspan id="scene-water-level">—%</tspan></text>
+              </svg>
+              <div class="scene-legend"><span><i class="legend-light"></i><span id="light-state">Menunggu status grow light</span></span><span><i class="legend-pump"></i><span id="pump-state">Menunggu status pompa</span></span></div>
+            </div>
+            <div class="scene-actions"><button id="preview-water-flow" class="button button-secondary" type="button">Pratinjau aliran · 5 detik</button><span class="caption">Hanya visual, tanpa perintah ke alat.</span></div>
+          </div>
+
+          <div class="status-list">
+            <article class="card status-card">
+              <div class="status-head"><span class="caption">Grow light</span><strong id="light-heading">Menunggu data</strong></div>
+              <div class="color-row"><span class="color-chip" id="color-chip"></span><div><strong id="rgb-value">RGB —</strong><span class="caption" id="light-status-note">Status akan muncul dari MQTT</span></div></div>
+              <div class="rgb-bars"><div><span>R</span><i><b id="rgb-red-bar"></b></i><span id="rgb-red-value">—</span></div><div><span>G</span><i><b id="rgb-green-bar"></b></i><span id="rgb-green-value">—</span></div><div><span>B</span><i><b id="rgb-blue-bar"></b></i><span id="rgb-blue-value">—</span></div></div>
+            </article>
+            <article class="card status-card pump-card" id="water-status-panel">
+              <div class="status-head"><span class="caption">Pompa air</span><strong id="pump-heading">Menunggu data</strong></div>
+              <p class="caption" id="pump-description">Aliran visual aktif saat pesan pompa ON diterima dari MQTT.</p>
+              <div class="meter-row"><span class="caption">Level reservoir</span><strong id="water-value">—%</strong></div>
+              <div class="meter"><span id="water-meter-fill"></span></div>
+              <p class="water-warning" id="water-warning" aria-live="polite"></p>
+            </article>
+            <article class="card status-card">
+              <span class="caption">Pesan MQTT terakhir</span>
+              <strong class="topic" id="last-topic">Belum ada pesan</strong>
+              <span class="caption" id="last-message-time">—</span>
+            </article>
+          </div>
+        </div>
+
+        <details class="disclosure card-disclosure" id="koneksi">
+          <summary>Pengaturan broker MQTT</summary>
+          <form id="connection-form" class="broker-form">
+            <label class="field field-wide"><span>Alamat WebSocket aman</span><input id="broker-url" type="url" value="wss://af2f1247.ala.asia-southeast1.emqxsl.com:8084/mqtt" autocomplete="url" required></label>
+            <label class="field"><span>Username</span><input id="broker-username" type="text" autocomplete="username"></label>
+            <label class="field"><span>Password</span><input id="broker-password" type="password" autocomplete="current-password"></label>
+            <div class="form-actions"><button class="button button-primary" id="connect-button" type="submit">Hubungkan</button><button class="button button-secondary" id="disconnect-button" type="button" disabled>Putuskan</button></div>
+            <p class="caption field-wide" id="connection-help" role="status">Profil terpilih terisi otomatis dan tersambung kembali saat halaman dibuka.</p>
+          </form>
+        </details>
+
+        <div class="card table-card">
+          <div class="table-head"><h3 id="schedule-title">Jadwal harian</h3><span class="tag" id="schedule-source">Menunggu snapshot MQTT</span></div>
+          <div class="table-scroll" tabindex="0" role="region" aria-labelledby="schedule-title"><table class="table"><thead><tr><th scope="col">Waktu (WIB)</th><th scope="col">Aksi</th><th scope="col">Sumber / status</th><th scope="col">Durasi pompa</th><th scope="col">Grow light</th></tr></thead><tbody id="schedule-rows"><tr><td colspan="5" class="empty-row">Memuat jadwal Smartport.</td></tr></tbody></table></div>
+          <p class="caption">Jadwal manual diteruskan ke alat melalui MQTT. Usulan AI hanya rekomendasi dan tidak menjalankan alat.</p>
+        </div>
+
+        <div class="two-col">
+          <div class="card table-card">
+            <div class="table-head"><h3 id="watering-history-title">Riwayat penyiraman</h3><span class="tag" id="watering-history-count">0 catatan</span></div>
+            <div class="table-scroll" tabindex="0" role="region" aria-labelledby="watering-history-title"><table class="table"><thead><tr><th scope="col">Waktu (WIB)</th><th scope="col">Pemicu</th><th scope="col">Level air</th><th scope="col">Hasil</th></tr></thead><tbody id="watering-history-rows"><tr><td colspan="4" class="empty-row">Belum ada riwayat penyiraman.</td></tr></tbody></table></div>
+            <nav class="pager" id="watering-history-pagination" aria-label="Halaman riwayat penyiraman" hidden><button class="button button-secondary" id="watering-history-prev" type="button">Sebelumnya</button><span id="watering-history-page" aria-live="polite">Halaman 1 dari 1</span><button class="button button-secondary" id="watering-history-next" type="button">Berikutnya</button></nav>
+            <p class="caption">Termasuk tombol Pump dan percobaan yang tertahan karena air rendah. Rentang 3 hari.</p>
+          </div>
+          <div class="card table-card">
+            <div class="table-head"><h3 id="grow-light-history-title">Riwayat grow light</h3><span class="tag" id="grow-light-history-count">0 catatan</span></div>
+            <div class="table-scroll" tabindex="0" role="region" aria-labelledby="grow-light-history-title"><table class="table"><thead><tr><th scope="col">Waktu (WIB)</th><th scope="col">Kondisi</th><th scope="col">Warna RGB</th></tr></thead><tbody id="grow-light-history-rows"><tr><td colspan="3" class="empty-row">Belum ada riwayat grow light.</td></tr></tbody></table></div>
+            <nav class="pager" id="grow-light-history-pagination" aria-label="Halaman riwayat grow light" hidden><button class="button button-secondary" id="grow-light-history-prev" type="button">Sebelumnya</button><span id="grow-light-history-page" aria-live="polite">Halaman 1 dari 1</span><button class="button button-secondary" id="grow-light-history-next" type="button">Berikutnya</button></nav>
+            <p class="caption">Perubahan on/off dari aplikasi Android beserta warna lampu. Rentang 3 hari.</p>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <div class="chart-head">
+            <div>
+              <h3 id="watering-chart-title">Penyiraman per jam <span class="chart-current" id="watering-total">— tindakan</span></h3>
+              <p class="caption" id="watering-chart-period">24 jam terakhir · WIB</p>
+            </div>
+            <span class="pill is-preview" id="watering-history-source"><span class="status-dot" aria-hidden="true"></span><span id="watering-history-source-label">Menunggu riwayat MQTT</span></span>
+          </div>
+          <div class="legend" aria-hidden="true"><span><i class="key key-bar-ok"></i>Sukses menyiram</span><span><i class="key key-bar-low"></i>Air rendah (≤20%)</span><span><i class="key key-bar-unknown"></i>Tanpa level air</span></div>
+          <div class="chart-scroll" data-scroll-end tabindex="0" role="region" aria-labelledby="watering-chart-title"><svg id="watering-chart" class="wide-chart" viewBox="0 0 1000 240" role="img" aria-label="Grafik riwayat penyiraman menunggu data perangkat"></svg></div>
+          <p class="caption" id="watering-chart-summary" role="status" aria-live="polite">Grafik menampilkan catatan aktual dari perangkat SmartPot.</p>
+        </div>
+      </section>
+
+      <section class="section" id="data" aria-labelledby="sensor-history-title">
+        <div class="section-head">
+          <div>
+            <h2 id="sensor-history-title">Data sensor</h2>
+            <p class="section-sub" id="sensor-history-count" role="status">Menunggu database</p>
+          </div>
+        </div>
+        <div class="card table-card">
+          <div class="table-scroll" tabindex="0" role="region" aria-labelledby="sensor-history-title"><table class="table table-numeric"><thead><tr><th scope="col">Waktu WIB</th><th scope="col">Suhu °C</th><th scope="col">Udara %</th><th scope="col">Tanah %</th><th scope="col">Air %</th><th scope="col">Baterai %</th></tr></thead><tbody id="sensor-history-rows"></tbody></table></div>
+          <nav class="pager" aria-label="Halaman data sensor"><button id="history-prev" class="button button-secondary" type="button">Sebelumnya</button><span id="history-page" aria-live="polite">—</span><button id="history-next" class="button button-secondary" type="button">Berikutnya</button></nav>
+        </div>
+      </section>
+
+      <footer class="page-footer"><span>SmartPot</span><span>Semua waktu dalam WIB (Asia/Jakarta)</span></footer>
+      <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
+    </main>
+  </div>
+
+  <dialog id="pdf-export" class="pdf-export" aria-labelledby="pdf-title" aria-describedby="pdf-report-info">
+    <header class="pdf-toolbar"><div><strong id="pdf-title">Pratinjau laporan PDF</strong><p id="pdf-report-info"></p></div><div class="pdf-toolbar-actions"><button id="pdf-close" class="button button-secondary" type="button">Tutup</button><button id="pdf-save" class="button button-primary" type="button" autofocus>Simpan sebagai PDF</button></div></header>
+    <article id="pdf-report" class="pdf-report"></article>
+  </dialog>
+
+  <dialog id="csv-export" class="sheet" aria-labelledby="csv-title" aria-describedby="csv-desc">
+    <form id="csv-form" method="dialog" class="sheet-body">
+      <h2 id="csv-title">Ekspor CSV</h2>
+      <p class="caption" id="csv-desc">Profil, sumber, dan periode mengikuti pilihan di halaman.</p>
+      <fieldset class="choice-group">
+        <legend>Data</legend>
+        <label class="choice"><input type="radio" name="csv-dataset" value="sensor" checked><span><strong>Data sensor</strong><small id="csv-sensor-info">Baris telemetry periode terpilih</small></span></label>
+        <label class="choice"><input type="radio" name="csv-dataset" value="perbandingan" id="csv-dataset-compare"><span><strong>Perbandingan aturan vs AI</strong><small id="csv-compare-info">Per jam untuk hari aturan dan hari AI</small></span></label>
+      </fieldset>
+      <fieldset class="choice-group">
+        <legend>Format</legend>
+        <label class="choice"><input type="radio" name="csv-format" value="standar"><span><strong>CSV standar</strong><small>Pemisah koma, desimal titik, UTF-8</small></span></label>
+        <label class="choice"><input type="radio" name="csv-format" value="excel"><span><strong>CSV Excel Indonesia</strong><small>Pemisah titik koma, desimal koma, UTF-8 dengan BOM</small></span></label>
+      </fieldset>
+      <p class="caption filename" id="csv-filename"></p>
+      <p class="caption" id="csv-status" role="status" aria-live="polite"></p>
+      <div class="sheet-actions"><button class="button button-secondary" id="csv-cancel" type="button">Batal</button><button class="button button-primary" id="csv-save" type="submit" value="save">Unduh CSV</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

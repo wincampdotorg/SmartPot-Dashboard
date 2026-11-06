@@ -1,0 +1,17 @@
+/* Halaman masuk; token dan komponen dasar berasal dari app.css. */
+.login-page { display: grid; place-items: center; align-content: center; gap: 24px; min-height: 100vh; min-height: 100dvh; padding: 32px 16px; }
+.login-card { width: min(400px, 100%); padding: 32px 28px; border-radius: 24px; background: var(--surface); box-shadow: var(--shadow); text-align: center; }
+.login-mark { display: block; width: 56px; height: 56px; margin: 0 auto 16px; }
+.login-card h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -.025em; }
+.login-intro { margin: 8px auto 24px; max-width: 32ch; color: var(--text-2); }
+.login-form { display: grid; gap: 14px; text-align: left; }
+.password-field { position: relative; }
+.password-field input { padding-right: 112px; }
+.password-field .button { position: absolute; top: 2px; right: 2px; min-height: 40px; font-size: .875rem; }
+.remember { display: flex; align-items: center; gap: 10px; min-height: 44px; color: var(--text); font-size: .9375rem; cursor: pointer; }
+.remember input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.login-error { min-height: 1.4em; color: var(--bad); font-size: .875rem; }
+.login-error:empty { min-height: 0; }
+.login-submit { width: 100%; font-size: 1rem; font-weight: 600; }
+.login-footer { color: var(--text-2); font-size: .8125rem; }
+@media (max-width: 420px) { .login-card { padding: 28px 20px; } }

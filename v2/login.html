@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
+  <title>SmartPot — Masuk</title>
+  <link rel="icon" type="image/svg+xml" href="assets/smartpot-mark.svg">
+  <link rel="stylesheet" href="app.css?v=1">
+  <link rel="stylesheet" href="login.css?v=2">
+  <script src="auth.js?v=1" data-page="login"></script><script src="login.js?v=2" defer></script>
+</head>
+<body>
+  <main class="login-page">
+    <section class="login-card" aria-labelledby="login-title">
+      <img class="login-mark" src="assets/smartpot-mark.svg" alt="" width="56" height="56">
+      <h1 id="login-title">Masuk ke SmartPot</h1>
+      <p class="login-intro">Pantau kelembapan tanah, pompa, dan grow light dari satu tempat.</p>
+      <form id="login-form" class="login-form" novalidate>
+        <label class="field" for="username"><span>Username</span><input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="password-field"><input id="password" name="password" type="password" autocomplete="current-password" aria-describedby="login-error" required><button type="button" id="toggle-password" class="button button-plain" aria-pressed="false" aria-controls="password">Tampilkan</button></div>
+        </div>
+        <label class="remember" for="remember"><input id="remember" type="checkbox"> Ingat saya selama 30 hari</label>
+        <p id="login-error" class="login-error" role="alert" aria-live="polite"></p>
+        <button class="button button-primary login-submit" id="login-submit" type="submit">Masuk</button>
+      </form>
+    </section>
+    <footer class="login-footer">SmartPot · Pemantauan tanaman</footer>
+  </main>
+</body>
+</html>
