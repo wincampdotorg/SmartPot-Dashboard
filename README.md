@@ -4,7 +4,7 @@ Dashboard statis HTML, CSS, dan JavaScript tanpa framework dan tanpa langkah bui
 
 ## Versi
 
-- `https://smartpotbinus.com/` (berkas di root): dashboard versi 1, tidak diubah.
+- `https://smartpotbinus.com/` (berkas di root): dashboard versi 1.
 - `https://smartpotbinus.com/v2/` (folder `v2/`): dashboard versi 2 dengan tampilan sederhana, ekspor CSV, dan perbandingan hari aturan vs hari AI. Kedua versi memakai API, broker MQTT, dan login yang sama.
 
 Bagian di bawah menjelaskan versi 2; nama berkas relatif terhadap folder `v2/`.
@@ -20,7 +20,7 @@ Bagian di bawah menjelaskan versi 2; nama berkas relatif terhadap folder `v2/`.
 
 Gaya sederhana: font sistem (`-apple-system`/SF), satu warna aksen hijau, kartu membulat dengan bayangan tipis, kontrol segmen untuk Sumber, Periode, dan parameter grafik. Mode terang dan gelap mengikuti `prefers-color-scheme`. Animasi pompa, lampu, dan tombol dimatikan saat `prefers-reduced-motion` aktif; aliran air tetap tampil statis. Rincian yang jarang dibutuhkan (pengaturan broker, detail model, event, evaluasi, tabel per jam) berada di bagian yang dapat dibuka-tutup.
 
-Gaya ada di `app.css` (dashboard dan login) serta `export-pdf.css` (pratinjau dan cetak PDF). Bootstrap tidak lagi dipakai pada `index.html` dan `login.html`. Pilihan Sumber dan Periode tetap disimpan di elemen `<select>` tersembunyi (`#history-source`, `#history-hours`); `segmented.js` menyinkronkan kontrol segmen dengan select tersebut sehingga skrip lain tidak berubah.
+Gaya ada di `app.css` (dashboard dan login) serta `export-pdf.css` (pratinjau dan cetak PDF). Versi 2 tidak memakai Bootstrap. Pilihan Sumber dan Periode disimpan di elemen `<select>` tersembunyi (`#history-source`, `#history-hours`); `segmented.js` menyinkronkan kontrol segmen dengan elemen tersebut.
 
 Tabel dan grafik lebar memiliki area gulir sendiri pada ponsel. Grafik perbandingan menyesuaikan lebar layar.
 
@@ -95,4 +95,4 @@ Logika CSV murni berada di `csv-core.js` (dapat di-`require` dari Node); antarmu
 node --test tests/
 ```
 
-`tests/pump-signal.test.cjs` menguji parser sinyal pompa dan durasi visual; `tests/csv-core.test.cjs` menguji format angka, escape RFC 4180, netralisasi rumus, BOM, aturan validitas pembacaan, median per jam, baris perbandingan, dan nama file. Setelah mengubah file JS/CSS, naikkan nilai `?v=` di `index.html` atau `login.html`.
+`tests/pump-signal.test.cjs` menguji parser sinyal pompa dan durasi visual; `tests/csv-core.test.cjs` menguji format angka, escape RFC 4180, netralisasi rumus, BOM, aturan validitas pembacaan, median per jam, baris perbandingan, dan nama file. Parameter `?v=` pada tautan JS/CSS di `index.html` dan `login.html` dipakai untuk memperbarui cache browser.

@@ -187,7 +187,7 @@
     try {
       const saved = JSON.parse(localStorage.getItem(wateringStorageKey()) || '{}');
       localStorage.setItem(wateringStorageKey(), JSON.stringify({ ...saved, watering: wateringEvents }));
-    } catch (_) { /* Keep the live chart usable when browser storage is unavailable. */ }
+    } catch (_) { /* Grafik tetap jalan bila penyimpanan browser tidak tersedia. */ }
   }
 
   function renderWateringChart() {
@@ -212,7 +212,7 @@
     const successCount = events.filter((event) => Number(event.waterLevel) > 20).length;
     const unknownCount=events.filter(event=>event.waterLevel==null).length;
     const lowCount = events.length - successCount - unknownCount;
-    els['watering-total'].textContent = `${events.length} ${events.length === 1 ? 'tindakan' : 'tindakan'}`;
+    els['watering-total'].textContent = `${events.length} tindakan`;
     els['watering-chart-summary'].textContent = wateringEvents.length
       ? `${successCount} sukses menyiram · ${lowCount} air rendah (≤20%) · ${unknownCount} tanpa level air · ${wateringEvents.length} catatan dalam 3 hari.`
       : 'Belum ada catatan penyiraman dari perangkat dalam 3 hari terakhir.';
@@ -265,7 +265,7 @@
       wateringEvents = normalizeWateringEvents(Array.isArray(saved.watering) ? saved.watering : []);
     } catch (_) { wateringEvents = []; }
     renderWateringChart();
-    setWateringSource(wateringEvents.length ? 'is-preview' : 'is-preview', wateringEvents.length ? 'Cache lokal · menyambungkan' : 'Menunggu riwayat MQTT');
+    setWateringSource('is-preview', wateringEvents.length ? 'Cache lokal · menyambungkan' : 'Menunggu riwayat MQTT');
   }
 
   function acceptWateringSnapshot(raw) {

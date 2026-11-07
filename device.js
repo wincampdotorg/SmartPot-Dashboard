@@ -63,14 +63,14 @@
     if (state.lightOn === null) return;
     try {
       localStorage.setItem(deviceStateStorageKey('grow-light'), JSON.stringify({ on: state.lightOn, rgb: state.rgb }));
-    } catch (_) { /* Browser storage may be unavailable. */ }
+    } catch (_) { /* Penyimpanan browser tidak tersedia. */ }
   }
 
   function persistWaterState() {
     if (state.water === null) return;
     try {
       localStorage.setItem(deviceStateStorageKey('water'), JSON.stringify({ level: state.water }));
-    } catch (_) { /* Browser storage may be unavailable. */ }
+    } catch (_) { /* Penyimpanan browser tidak tersedia. */ }
   }
 
   function setConnection(mode, label, help) {
@@ -212,7 +212,7 @@
       const cachedWater = parseJson(localStorage.getItem(deviceStateStorageKey('water')) || 'null');
       const level = parsePercentage(cachedWater && cachedWater.level);
       if (level !== null) setWater(level);
-    } catch (_) { /* Continue waiting for current MQTT state if storage is unavailable. */ }
+    } catch (_) { /* Tunggu status MQTT bila cache tidak bisa dibaca. */ }
   }
 
   function pruneHistory(events) {
@@ -232,7 +232,7 @@
         watering: state.wateringHistory,
         growLight: state.growLightHistory
       }));
-    } catch (_) { /* Storage may be unavailable in a restricted browser context. */ }
+    } catch (_) { /* Penyimpanan browser tidak tersedia. */ }
   }
 
   let catalogReady = false;
@@ -274,7 +274,7 @@
 
   function renderHistoryTable(tbody, count, pagination, previousButton, pageLabel, nextButton, events, columns, emptyText, page, setPage) {
     tbody.replaceChildren();
-    count.textContent = `${events.length} ${events.length === 1 ? 'catatan' : 'catatan'}`;
+    count.textContent = `${events.length} catatan`;
     const pageCount = Math.max(1, Math.ceil(events.length / 10));
     const currentPage = Math.min(page, pageCount);
     setPage(currentPage);
@@ -332,7 +332,7 @@
       const saved = parseJson(localStorage.getItem(historyStorageKey()) || (els['broker-profile'].value === 'web-panel' ? localStorage.getItem(HISTORY_STORAGE_KEY) : null) || '{}') || {};
       state.wateringHistory = pruneHistory(Array.isArray(saved.watering) ? saved.watering : []);
       state.growLightHistory = pruneHistory(Array.isArray(saved.growLight) ? saved.growLight : []);
-    } catch (_) { /* Begin with empty history if local storage cannot be read. */ }
+    } catch (_) { /* Riwayat dimulai kosong bila localStorage tidak terbaca. */ }
     renderHistory();
   }
 
