@@ -11,18 +11,18 @@
   <link rel="stylesheet" href="auth.css?v=1">
   <script src="auth.js?v=1"></script>
   <title>SmartPot — Ringkasan</title>
-  <link rel="stylesheet" href="app.css?v=1">
+  <link rel="stylesheet" href="app.css?v=2">
   <link rel="stylesheet" href="export-pdf.css?v=2">
   <script src="https://unpkg.com/mqtt@5.16.1/dist/mqtt.min.js" crossorigin="anonymous" defer></script>
   <script src="csv-core.js?v=1" defer></script>
   <script src="segmented.js?v=1" defer></script>
-  <script src="export-pdf.js?v=3" defer></script>
-  <script src="dashboard.js?v=apple-1" defer></script>
+  <script src="export-pdf.js?v=4" defer></script>
+  <script src="dashboard.js?v=apple-2" defer></script>
   <script src="pump-signal.js?v=2" defer></script>
   <script src="device.js?v=apple-1" defer></script>
   <script src="ai-dashboard.js?v=3" defer></script>
-  <script src="comparison-view.js?v=1" defer></script>
-  <script src="export-csv.js?v=1" defer></script>
+  <script src="comparison-view.js?v=2" defer></script>
+  <script src="export-csv.js?v=2" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#ringkasan">Langsung ke konten</a>
@@ -74,6 +74,7 @@
             <label><input type="radio" name="segment-source" value="simulation"><span>Simulasi</span></label>
           </div>
           <select id="history-source" hidden><option value="simulation">Simulasi · MySQL OVH</option><option value="device">Data alat · SmartPot 01</option></select>
+          <label class="fill-toggle" id="history-fill-wrap" hidden><input type="checkbox" id="history-fill"> Sertakan isian simulasi</label>
         </div>
         <div class="control">
           <span class="control-label" id="hours-segment-label">Periode</span>

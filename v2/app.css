@@ -162,9 +162,12 @@ p { margin: 0; }
 .lead { max-width: 60ch; margin-top: 8px; color: var(--text-2); font-size: 1.0625rem; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .card { min-width: 0; padding: 20px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
-.controls { display: grid; grid-template-columns: minmax(200px, 1fr) auto auto; align-items: end; gap: 16px 24px; }
+.controls { display: grid; grid-template-columns: minmax(200px, 1fr) auto auto; align-items: start; gap: 16px 24px; }
 .control { display: grid; gap: 6px; min-width: 0; }
 .control-label { color: var(--text-2); font-size: .8125rem; font-weight: 500; }
+.fill-toggle { display: flex; align-items: center; gap: 8px; min-height: 32px; color: var(--text-2); font-size: .8125rem; cursor: pointer; }
+.fill-toggle[hidden] { display: none; }
+.fill-toggle input { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
 .controls-status { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding-top: 14px; border-top: 1px solid var(--separator); }
 .controls-status .pill { max-width: 100%; }
 .section { margin-top: 40px; scroll-margin-top: 128px; }

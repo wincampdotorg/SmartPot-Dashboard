@@ -26,9 +26,9 @@ Tabel dan grafik lebar memiliki area gulir sendiri pada ponsel. Grafik perbandin
 
 ## Riwayat sensor
 
-Grafik dan tabel membaca telemetry dari MySQL OVH (`Smartport.telemetry`) melalui API HTTPS. Pilih Simulasi atau Alat serta periode 24 jam, 2 hari, atau 3 hari. Simulasi tiga hari berisi satu titik per menit dan diberi label terpisah dari data alat. Riwayat diperbarui setiap 30 detik; tabel menampilkan 10 data per halaman. Mode alat menampilkan keadaan kosong saat belum ada telemetry dan tidak mengganti data asli dengan simulasi. Kredensial MySQL tetap di server.
+Grafik dan tabel membaca telemetry dari MySQL OVH (`Smartport.telemetry`) melalui API HTTPS. Pilih Simulasi atau Alat serta periode 24 jam, 2 hari, atau 3 hari. Simulasi tiga hari berisi satu titik per menit dan diberi label terpisah dari data alat. Riwayat diperbarui setiap 30 detik; tabel menampilkan 10 data per halaman. Mode alat menampilkan keadaan kosong saat belum ada telemetry dan tidak mengganti data asli dengan simulasi. Pada sumber Alat, kotak centang **Sertakan isian simulasi** (bawaan tidak dicentang) menentukan apakah baris pengisi celah saat Wi-Fi alat mati (`isian_simulasi_tdr2`) ikut ditampilkan; pilihan ini juga berlaku untuk tautan Data JSON, Ekspor PDF, dan ekspor CSV data sensor. Kredensial MySQL tetap di server.
 
-API baca: `https://wincamp.web.id/smartpot/api/telemetry?source=simulation&hours=72`. Ganti `source` menjadi `device` untuk data alat; `profile=tdr2` memakai device `smartpot-tdr2`, `profile=web-panel` memakai `smartpot-01`. Timestamp dalam epoch milidetik; UI memakai WIB. Maksimal 5.000 baris terbaru.
+API baca: `https://wincamp.web.id/smartpot/api/telemetry?source=simulation&hours=72`. Ganti `source` menjadi `device` untuk data alat; tambahkan `isian=0` untuk membuang baris isian simulasi; `profile=tdr2` memakai device `smartpot-tdr2`, `profile=web-panel` memakai `smartpot-01`. Timestamp dalam epoch milidetik; UI memakai WIB. Maksimal 5.000 baris terbaru.
 
 ## Perangkat dan MQTT
 
@@ -73,7 +73,7 @@ Prediksi kelembapan tanah 30/60/120 menit memakai regresi ridge per sumber/peran
 
 Tombol **Ekspor CSV** di samping **Ekspor PDF** membuka pilihan:
 
-- **Data sensor**: baris telemetry untuk profil, sumber, dan periode yang dipilih, diambil ulang dari API saat diunduh (bukan dari pembaruan MQTT di memori browser). Kolom: `waktu_wib, device_id, sumber_data, tanah_pct, suhu_c, udara_pct, air_pct, baterai_pct`, urut dari lama ke baru. `sumber_data` berisi `data_source` dari database (misalnya `mqtt_tdr2`, `isian_simulasi_tdr2`, `simulation_3days`), sehingga baris isian simulasi tidak tercampur dengan data alat.
+- **Data sensor**: baris telemetry untuk profil, sumber, dan periode yang dipilih, diambil ulang dari API saat diunduh (bukan dari pembaruan MQTT di memori browser). Kolom: `waktu_wib, device_id, sumber_data, tanah_pct, suhu_c, udara_pct, air_pct, baterai_pct`, urut dari lama ke baru. `sumber_data` berisi `data_source` dari database (misalnya `mqtt_tdr2`, `isian_simulasi_tdr2`, `simulation_3days`). Baris isian simulasi hanya ikut bila **Sertakan isian simulasi** dicentang. Perbandingan aturan vs AI tetap memakai data alat dan isian untuk nilai aktual hari aturan, sama dengan perhitungan server.
 - **Perbandingan aturan vs AI**: 24 baris per jam untuk hari aturan dan 24 baris untuk hari AI. Kolom: `tanggal, jam_wib, hari (aturan|ai), tanah_aktual_pct, prediksi_ai_pct, aturan_siram, ai_siram` (jumlah siram dalam jam tersebut). Nilai aktual hari AI berasal dari `forecast_vs_actual` apa adanya (jam tanpa titik server diisi dari telemetry); nilai aktual hari aturan dihitung dari telemetry 72 jam dengan aturan validitas, pembulatan per menit, dan median ±5 menit di dalam hari yang sama dengan server. Karena API telemetry membaca 72 jam terakhir dari waktu sekarang, simulasi lama dapat membuat kolom aktual hari aturan kosong; pesan status menyebutkannya. Kolom yang tidak berlaku dikosongkan.
 
 Format:

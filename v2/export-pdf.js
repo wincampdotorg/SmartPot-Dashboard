@@ -43,7 +43,7 @@
     node('h1', 'Riwayat tanaman & perangkat', title);
     const metadata = node('div', null, report, 'pdf-metadata');
     node('p', `Profil: ${device.profile === 'tdr2' ? 'TDR2' : 'SmartPot Web Panel'} · Periode: ${sensors.hours} jam terakhir`, metadata);
-    node('p', `Data sensor: ${sensors.simulation ? 'SIMULASI' : 'DATA ALAT'} · ${rows.length.toLocaleString('id-ID')} catatan · Sumber: MySQL OVH / MQTT`, metadata);
+    node('p', `Data sensor: ${sensors.simulation ? 'SIMULASI' : sensors.fill ? 'DATA ALAT + ISIAN SIMULASI' : 'DATA ALAT (tanpa isian simulasi)'} · ${rows.length.toLocaleString('id-ID')} catatan · Sumber: MySQL OVH / MQTT`, metadata);
     node('p', `Dibuat: ${when(now)}`, metadata);
     if (rows.length) node('p', `Rentang pembacaan: ${when(rows[0].ts)} — ${when(rows[rows.length-1].ts)}`, metadata);
     node('p', sensors.simulation ? 'Data sensor pada laporan ini merupakan simulasi. Jadwal dan riwayat aktuator di bawah berasal dari profil MQTT alat yang dipilih.' : 'Data sensor berasal dari telemetry alat; pembacaan belum tersedia ditandai dengan —. Status koneksi broker tidak membuktikan alat sedang online.', report, 'pdf-note');

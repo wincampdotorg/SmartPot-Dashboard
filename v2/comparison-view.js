@@ -24,11 +24,12 @@
   let tableKey = '';
 
   // Telemetry 72 jam untuk nilai aktual hari aturan; dipakai juga oleh ekspor CSV.
-  async function loadTelemetry({ profile, source, hours = 72 }) {
+  async function loadTelemetry({ profile, source, hours = 72, isian = '1' }) {
     const url = new URL(TELEMETRY_API);
     url.searchParams.set('source', source);
     url.searchParams.set('hours', String(hours));
     url.searchParams.set('profile', profile);
+    if (source === 'device') url.searchParams.set('isian', isian === '0' ? '0' : '1');
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 15000);
     try {

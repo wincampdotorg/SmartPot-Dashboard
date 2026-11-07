@@ -13,7 +13,8 @@
   const integer = new Intl.NumberFormat('id-ID');
   let busy = false;
 
-  const context = () => ({ profile: byId('broker-profile').value || 'tdr2', source: byId('history-source').value, hours: Number(byId('history-hours').value) || 72 });
+  const context = () => ({ profile: byId('broker-profile').value || 'tdr2', source: byId('history-source').value, hours: Number(byId('history-hours').value) || 72,
+    isian: byId('history-fill').checked ? '1' : '0' });
   function snapshot() {
     const detail = {};
     window.dispatchEvent(new CustomEvent('smartpot:collect-report', { detail }));
@@ -34,7 +35,7 @@
   function refresh() {
     const ctx = context();
     const loaded = snapshot().sensors?.records?.length || 0;
-    byId('csv-sensor-info').textContent = `${ctx.hours} jam terakhir · ${ctx.source === 'simulation' ? 'simulasi' : 'data alat'} · ${integer.format(loaded)} baris tampil, diambil ulang dari database saat diunduh`;
+    byId('csv-sensor-info').textContent = `${ctx.hours} jam terakhir · ${ctx.source === 'simulation' ? 'simulasi' : ctx.isian === '1' ? 'data alat + isian simulasi' : 'data alat tanpa isian simulasi'} · ${integer.format(loaded)} baris tampil, diambil ulang dari database saat diunduh`;
     const comparison = currentComparison();
     compareInput.disabled = !comparison;
     byId('csv-compare-info').textContent = comparison
@@ -72,7 +73,7 @@
         const comparison = currentComparison();
         if (!comparison) throw new Error('Perbandingan belum tersedia untuk profil dan sumber ini.');
         let records = [];
-        try { records = (await window.SmartPotTelemetry.load({ ...ctx, hours: 72 })).rows; }
+        try { records = (await window.SmartPotTelemetry.load({ ...ctx, hours: 72, isian: '1' })).rows; }
         catch (error) { note = ` ${error.message} Nilai aktual hari aturan dikosongkan.`; }
         const rows = core.comparisonRows(comparison, records);
         if (!note && !core.ruleActualHours(rows)) note = ' Telemetry 72 jam terakhir tidak mencakup hari aturan; kolom tanah aktual hari aturan kosong.';

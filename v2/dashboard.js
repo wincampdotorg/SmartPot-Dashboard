@@ -27,6 +27,9 @@
   let lastError = '';
   const historySource = document.getElementById('history-source');
   const historyHours = document.getElementById('history-hours');
+  // Isian simulasi (pengisi celah saat Wi-Fi alat mati) bawaan tidak ditampilkan; dicentang = ikut ditampilkan dan diekspor.
+  const historyFill = document.getElementById('history-fill');
+  const includeFill = () => !isSimulation() && historyFill.checked;
   const API_URL = 'https://wincamp.web.id/smartpot/api/telemetry';
   const isSimulation = () => historySource.value === 'simulation';
   let selectedMetric = 'soil_moisture';
@@ -76,6 +79,8 @@
     url.searchParams.set('source', historySource.value);
     url.searchParams.set('hours', historyHours.value);
     url.searchParams.set('profile', document.getElementById('broker-profile').value || 'web-panel');
+    if (!isSimulation()) url.searchParams.set('isian', includeFill() ? '1' : '0');
+    document.getElementById('history-fill-wrap').hidden = isSimulation();
     document.getElementById('history-json').href = url.href;
     els['refresh-button'].classList.add('is-loading');
     els['refresh-button'].disabled = true;
@@ -93,7 +98,7 @@
       updateConnectionState();
       if (records.length) render(); else renderEmpty();
       renderSensorHistory();
-      document.getElementById('database-proof').textContent = `MySQL OVH · Smartport.telemetry · ${payload.count.toLocaleString('id-ID')} catatan · ${isSimulation() ? 'SIMULASI' : 'DATA ALAT'} · diperbarui ${timeFmt.format(new Date(payload.server_time))} WIB${payload.truncated ? ' · menampilkan 5.000 catatan terbaru' : ''}`;
+      document.getElementById('database-proof').textContent = `MySQL OVH · Smartport.telemetry · ${payload.count.toLocaleString('id-ID')} catatan · ${isSimulation() ? 'SIMULASI' : includeFill() ? 'DATA ALAT + ISIAN SIMULASI' : 'DATA ALAT'} · diperbarui ${timeFmt.format(new Date(payload.server_time))} WIB${payload.truncated ? ' · menampilkan 5.000 catatan terbaru' : ''}`;
     } catch (error) {
       if (id !== requestId) return;
       lastError = 'Database belum dapat dimuat. Tekan Muat ulang untuk mencoba kembali.';
@@ -118,7 +123,8 @@
     els['connection-note'].hidden = false;
     els['connection-note'].textContent = lastError || (isSimulation()
       ? 'SIMULASI: data tiga hari disimpan di MySQL OVH, interval satu menit. Pilih Data alat untuk melihat pembacaan ESP32.'
-      : 'Data asli dari MQTT disimpan di MySQL OVH. Riwayat diperbarui setiap 30 detik; data simulasi dipisahkan.');
+      : 'Data asli dari MQTT disimpan di MySQL OVH. Riwayat diperbarui setiap 30 detik; data simulasi dipisahkan.'
+        + (includeFill() ? ' Isian simulasi pengisi celah Wi-Fi ikut ditampilkan dengan label sumber_data isian_simulasi_tdr2.' : ' Isian simulasi pengisi celah Wi-Fi tidak ditampilkan.'));
   }
 
   function renderEmpty() {
@@ -452,7 +458,7 @@
   }
 
   els['refresh-button'].addEventListener('click', () => { stopPlayback(); loadData(); });
-  [historySource, historyHours].forEach(select => select.addEventListener('change', () => {
+  [historySource, historyHours, historyFill].forEach(select => select.addEventListener('change', () => {
     stopPlayback(); records = []; cursorIndex = 0; historyPage = 0; lastError = ''; renderEmpty(); renderSensorHistory(); loadData();
   }));
   document.getElementById('history-prev').addEventListener('click', () => { historyPage--; renderSensorHistory(); });
@@ -489,7 +495,7 @@
   });
 
   window.addEventListener('smartpot:collect-report', event => {
-    event.detail.sensors = { records: records.map(row => ({...row})), hours: Number(historyHours.value), simulation: isSimulation(), metricLabel: METRICS[selectedMetric].label, error: lastError };
+    event.detail.sensors = { records: records.map(row => ({...row})), hours: Number(historyHours.value), simulation: isSimulation(), fill: includeFill(), metricLabel: METRICS[selectedMetric].label, error: lastError };
   });
 
   document.querySelector('#sensor .eyebrow').firstChild.textContent = new Intl.DateTimeFormat('id-ID', { timeZone: WIB, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
