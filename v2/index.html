@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <link rel="icon" type="image/svg+xml" href="assets/smartpot-mark.svg">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self' https://unpkg.com; img-src 'self' data:; connect-src 'self' wss: https://wincamp.web.id; base-uri 'self'; form-action 'self'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self' https://unpkg.com; img-src 'self' data:; connect-src 'self' wss: https://api.smartpotbinus.com; base-uri 'self'; form-action 'self'; object-src 'none'">
   <link rel="stylesheet" href="auth.css?v=1">
   <script src="auth.js?v=1"></script>
   <title>SmartPot — Ringkasan</title>
@@ -17,11 +17,11 @@
   <script src="csv-core.js?v=1" defer></script>
   <script src="segmented.js?v=1" defer></script>
   <script src="export-pdf.js?v=4" defer></script>
-  <script src="dashboard.js?v=3" defer></script>
+  <script src="dashboard.js?v=4" defer></script>
   <script src="pump-signal.js?v=2" defer></script>
-  <script src="device.js?v=2" defer></script>
-  <script src="ai-dashboard.js?v=3" defer></script>
-  <script src="comparison-view.js?v=2" defer></script>
+  <script src="device.js?v=3" defer></script>
+  <script src="ai-dashboard.js?v=4" defer></script>
+  <script src="comparison-view.js?v=3" defer></script>
   <script src="export-csv.js?v=2" defer></script>
 </head>
 <body>
@@ -89,7 +89,7 @@
           <span class="pill is-preview" id="source-badge"><span class="status-dot" aria-hidden="true"></span><span id="source-label">Memuat data</span></span>
           <p id="database-proof" class="caption" role="status" aria-live="polite">Mengambil riwayat dari MySQL OVH…</p>
           <p class="caption" id="connection-note" role="status" hidden></p>
-          <a id="history-json" class="caption link" href="https://wincamp.web.id/smartpot/api/telemetry?source=simulation&amp;hours=72" target="_blank" rel="noopener">Data JSON ↗</a>
+          <a id="history-json" class="caption link" href="https://api.smartpotbinus.com/telemetry?source=simulation&amp;hours=72" target="_blank" rel="noopener">Data JSON ↗</a>
         </div>
       </section>
 

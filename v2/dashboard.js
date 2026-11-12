@@ -30,7 +30,7 @@
   // Isian simulasi (pengisi celah saat Wi-Fi alat mati) bawaan tidak ditampilkan; dicentang = ikut ditampilkan dan diekspor.
   const historyFill = document.getElementById('history-fill');
   const includeFill = () => !isSimulation() && historyFill.checked;
-  const API_URL = 'https://wincamp.web.id/smartpot/api/telemetry';
+  const API_URL = 'https://api.smartpotbinus.com/telemetry';
   const isSimulation = () => historySource.value === 'simulation';
   let selectedMetric = 'soil_moisture';
   let cursorIndex = 0;

@@ -27,7 +27,7 @@
   let lastError = '';
   const historySource = document.getElementById('history-source');
   const historyHours = document.getElementById('history-hours');
-  const API_URL = 'https://wincamp.web.id/smartpot/api/telemetry';
+  const API_URL = 'https://api.smartpotbinus.com/telemetry';
   const isSimulation = () => historySource.value === 'simulation';
   let selectedMetric = 'soil_moisture';
   let cursorIndex = 0;

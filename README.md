@@ -28,7 +28,7 @@ Tabel dan grafik lebar memiliki area gulir sendiri pada ponsel. Grafik perbandin
 
 Grafik dan tabel membaca telemetry dari MySQL OVH (`Smartport.telemetry`) melalui API HTTPS. Pilih Simulasi atau Alat serta periode 24 jam, 2 hari, atau 3 hari. Simulasi tiga hari berisi satu titik per menit dan diberi label terpisah dari data alat. Riwayat diperbarui setiap 30 detik; tabel menampilkan 10 data per halaman. Mode alat menampilkan keadaan kosong saat belum ada telemetry dan tidak mengganti data asli dengan simulasi. Pada sumber Alat, kotak centang **Sertakan isian simulasi** (bawaan tidak dicentang) menentukan apakah baris pengisi celah saat Wi-Fi alat mati (`isian_simulasi_tdr2`) ikut ditampilkan; pilihan ini juga berlaku untuk tautan Data JSON, Ekspor PDF, dan ekspor CSV data sensor. Kredensial MySQL tetap di server.
 
-API baca: `https://wincamp.web.id/smartpot/api/telemetry?source=simulation&hours=72`. Ganti `source` menjadi `device` untuk data alat; tambahkan `isian=0` untuk membuang baris isian simulasi; `profile=tdr2` memakai device `smartpot-tdr2`, `profile=web-panel` memakai `smartpot-01`. Timestamp dalam epoch milidetik; UI memakai WIB. Maksimal 5.000 baris terbaru.
+API baca: `https://api.smartpotbinus.com/telemetry?source=simulation&hours=72`. Ganti `source` menjadi `device` untuk data alat; tambahkan `isian=0` untuk membuang baris isian simulasi; `profile=tdr2` memakai device `smartpot-tdr2`, `profile=web-panel` memakai `smartpot-01`. Timestamp dalam epoch milidetik; UI memakai WIB. Maksimal 5.000 baris terbaru.
 
 ## Perangkat dan MQTT
 
@@ -50,7 +50,7 @@ Login ini hanya pembatas tampilan untuk tugas kuliah di GitHub Pages. JavaScript
 
 Bagian **Prediksi AI** mengikuti Profil dan Sumber yang dipilih. Semua hasil bersifat bayangan (*shadow*): perangkat lunak tidak pernah menyalakan pompa.
 
-Endpoint baca: `https://wincamp.web.id/smartpot/api/ai?profile=tdr2&source=device`. Worker OVH berjalan setiap lima menit; halaman memperbarui hasil setiap menit saat aktif.
+Endpoint baca: `https://api.smartpotbinus.com/ai?profile=tdr2&source=device`. Worker OVH berjalan setiap lima menit; halaman memperbarui hasil setiap menit saat aktif.
 
 ### Perbandingan aturan sensor vs prediksi AI
 

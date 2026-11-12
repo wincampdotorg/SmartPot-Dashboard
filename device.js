@@ -249,7 +249,7 @@
     catalogRequest = controller;
     const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const response = await fetch(`https://wincamp.web.id/smartpot/api/catalog?profile=${encodeURIComponent(profile)}`, {cache:'no-store',signal:controller.signal});
+      const response = await fetch(`https://api.smartpotbinus.com/catalog?profile=${encodeURIComponent(profile)}`, {cache:'no-store',signal:controller.signal});
       if (!response.ok) throw new Error('API katalog tidak tersedia');
       const data = await response.json();
       if (profile !== els['broker-profile'].value || data.database !== 'Smartport' || data.profile !== profile) return;

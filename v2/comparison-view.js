@@ -6,7 +6,7 @@
   const byId = id => document.getElementById(id);
   const HOUR = core.HOUR;
   const SVG_NS = 'http://www.w3.org/2000/svg';
-  const TELEMETRY_API = 'https://wincamp.web.id/smartpot/api/telemetry';
+  const TELEMETRY_API = 'https://api.smartpotbinus.com/telemetry';
   const num = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 });
   const integer = new Intl.NumberFormat('id-ID');
   const clockFmt = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });

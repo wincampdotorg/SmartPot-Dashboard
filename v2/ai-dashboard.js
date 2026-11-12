@@ -78,7 +78,7 @@
       window.dispatchEvent(new CustomEvent('smartpot:ai-payload',{detail:null}));
     }
     try {
-      const url=new URL('https://wincamp.web.id/smartpot/api/ai');
+      const url=new URL('https://api.smartpotbinus.com/ai');
       url.searchParams.set('profile',profile.value);url.searchParams.set('source',source.value);url.searchParams.set('events_page',String(observedPage));
       const response=await fetch(url,{signal:request.signal,cache:'no-store',credentials:'omit'});
       const payload=await response.json();
